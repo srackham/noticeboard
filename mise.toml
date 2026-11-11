@@ -1,0 +1,24 @@
+[tools]
+go = "1.26.6"
+
+[tasks.build]
+description = "Build the noticeboard binary (no CGO)"
+env = { CGO_ENABLED = "0" }
+run = "go build -o noticeboard ."
+
+[tasks.test]
+description = "Run all tests"
+run = "go test ./..."
+
+[tasks.fmt]
+description = "Format Go source"
+run = "go fmt ./..."
+
+[tasks.tidy]
+description = "Verify and tidy module dependencies"
+run = "go mod verify && go mod tidy"
+
+[tasks.clean]
+description = "Tidy modules and remove build artifacts"
+depends = ["tidy"]
+run = "rm -f noticeboard"
