@@ -16,6 +16,8 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	"noticeboard/internal/db"
 )
 
 const (
@@ -109,12 +111,19 @@ func runServe(args []string, stdout, stderr io.Writer) int {
 		return usageFail(stderr, serveUsage, fmt.Sprintf("unexpected argument %q", positional[0]))
 	}
 
-	// Step 1 skeleton: the database and audit log are wired in later steps.
-	_, _ = dbPath, logPath
+	// The audit log is wired in step 6.
+	_ = logPath
 	if *gui {
 		fmt.Fprintln(stderr, "noticeboard: --gui is not implemented yet")
 		return 1
 	}
+	sqlDB, err := db.Open(*dbPath)
+	if err != nil {
+		fmt.Fprintf(stderr, "noticeboard: %v\n", err)
+		return 1
+	}
+	defer sqlDB.Close()
+
 	if err := serveHTTP(*addr, stdout); err != nil {
 		fmt.Fprintf(stderr, "noticeboard: %v\n", err)
 		return 1
