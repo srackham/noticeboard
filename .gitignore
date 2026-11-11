@@ -1,2 +1,8 @@
+NOTES.md
 SCRATCH.md
 pi-session-*
+sessions/
+noticeboard
+noticeboard.db
+noticeboard.db-*
+noticeboard.log
