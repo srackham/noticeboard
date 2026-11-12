@@ -1,6 +1,6 @@
 package main
 
-// Desktop mode (DESIGN.md section 9): serve --gui opens the board in a browser
+// Desktop mode (DESIGN.md section 9): serve --launch opens the board in a browser
 // app-mode window. The launcher is adapted from htmx-todos/gui.go. It is plain Go,
 // so the binary needs no webview library and no CGO.
 

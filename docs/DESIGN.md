@@ -23,7 +23,7 @@ Reference mock-up: [`docs/time-display.png`](time-display.png)
 - An administration dashboard, protected by login, for managing:
   - the clocks (add, edit, enable/disable, reorder, delete);
   - the board settings (title, colours, refresh interval).
-- Run as a web server, or as a desktop-style app window with `serve --gui`.
+- Run as a web server, or as a desktop-style app window with `serve --launch`.
 
 **Out of scope (for now)**
 
@@ -50,7 +50,7 @@ A single Go binary using only the standard library for HTTP and `database/sql` f
 
 ```
 noticeboard/
-├── main.go                 # subcommands: serve [--addr --db --log --gui], admin init [--db]; --help
+├── main.go                 # subcommands: serve [--addr --db --log --launch], admin init [--db]; --help
 ├── gui.go                  # launchGUI: browser app-mode (adapted from htmx-todos)
 ├── assets.go               # go:embed for templates/ and static/
 ├── internal/
@@ -99,13 +99,13 @@ SQLite tables, created by the embedded migrations (section 2.1). There is **no R
 
 One record per clock.
 
-| Field     | Type    | Constraints                                                 |
-|-----------|---------|-------------------------------------------------------------|
-| `id`      | INTEGER | primary key, autoincrement (used in routes)                 |
-| `label`   | TEXT    | required, trimmed, 1–60 characters, unique (`CHECK`, `UNIQUE`) |
+| Field     | Type    | Constraints                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| --------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`      | INTEGER | primary key, autoincrement (used in routes)                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `label`   | TEXT    | required, trimmed, 1–60 characters, unique (`CHECK`, `UNIQUE`)                                                                                                                                                                                                                                                                                                                                                                               |
 | `zone`    | TEXT    | required, unique, IANA zone ID (e.g. `Australia/Sydney`); checked in Go with `time.LoadLocation`, which must not return an error. The empty string and `Local` are rejected. SQLite cannot validate zone names. The clock form offers a drop-down of the zones in the embedded database (`internal/zones/zonenames.txt`), grouped by region. Legacy aliases (the IANA `backward` links, such as `Asia/Calcutta`) are left out; `UTC` is kept |
-| `enabled` | INTEGER | `0` or `1`, default `1` (`CHECK`)                           |
-| `sort`    | INTEGER | required, unique; defines display order (ascending); new clocks take max + 1 |
+| `enabled` | INTEGER | `0` or `1`, default `1` (`CHECK`)                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `sort`    | INTEGER | required, unique; defines display order (ascending); new clocks take max + 1                                                                                                                                                                                                                                                                                                                                                                 |
 
 - Disabled clocks are hidden on the public board but remain in the admin list.
 - The board is a fixed 3×3 grid, so at most nine clocks may be enabled. Creating a clock, or enabling a disabled one, is refused when nine are already enabled. SQLite cannot express this rule, so the application enforces it. Disabled clocks have no limit.
@@ -116,15 +116,15 @@ One record per clock.
 
 A singleton: exactly one row, enforced by `CHECK (id = 1)` and created by the initial migration. The application reads and updates it. It is never created or deleted through the UI.
 
-| Field               | Type    | Default       | Constraints                                  |
-|---------------------|---------|---------------|----------------------------------------------|
-| `id`                | INTEGER | `1`           | always `1`                                   |
-| `title`             | TEXT    | `World Clocks` | trimmed, max 80 characters; blank hides the header |
-| `refresh_seconds`   | INTEGER | `5`           | 1–60 (`CHECK`)                               |
-| `colour_background` | TEXT    | `#d9d9d9`     | `#rrggbb` (`CHECK` with `GLOB`)              |
-| `colour_label`      | TEXT    | `#4169e1`     | `#rrggbb`; label bar background, and the title text colour |
-| `colour_clock`      | TEXT    | `#228b22`     | `#rrggbb` (non-UTC clocks)                   |
-| `colour_utc`        | TEXT    | `#b22222`     | `#rrggbb` (UTC clock)                        |
+| Field               | Type    | Default        | Constraints                                                |
+| ------------------- | ------- | -------------- | ---------------------------------------------------------- |
+| `id`                | INTEGER | `1`            | always `1`                                                 |
+| `title`             | TEXT    | `World Clocks` | trimmed, max 80 characters; blank hides the header         |
+| `refresh_seconds`   | INTEGER | `5`            | 1–60 (`CHECK`)                                             |
+| `colour_background` | TEXT    | `#d9d9d9`      | `#rrggbb` (`CHECK` with `GLOB`)                            |
+| `colour_label`      | TEXT    | `#4169e1`      | `#rrggbb`; label bar background, and the title text colour |
+| `colour_clock`      | TEXT    | `#228b22`      | `#rrggbb` (non-UTC clocks)                                 |
+| `colour_utc`        | TEXT    | `#b22222`      | `#rrggbb` (UTC clock)                                      |
 
 - Colours are accepted in either case and stored in lowercase.
 - Label text is fixed white. It is not a setting.
@@ -135,20 +135,20 @@ A singleton: exactly one row, enforced by `CHECK (id = 1)` and created by the in
 
 The single administrator account (section 4.1). `CHECK (id = 1)` limits the table to one row. It is created or replaced only by the `noticeboard admin init` command, never through the UI.
 
-| Field           | Type    | Constraints                                              |
-|-----------------|---------|----------------------------------------------------------|
-| `id`            | INTEGER | always `1`                                               |
+| Field           | Type    | Constraints                                                                                                                            |
+| --------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`            | INTEGER | always `1`                                                                                                                             |
 | `username`      | TEXT    | required; one or more printable characters with no white space; trimmed and lower-cased before storing and before lookup (section 4.1) |
-| `password_hash` | TEXT    | bcrypt hash; plaintext passwords are never stored        |
+| `password_hash` | TEXT    | bcrypt hash; plaintext passwords are never stored                                                                                      |
 
 ### 3.4 `sessions`
 
 Server-side login sessions (section 4.2).
 
-| Field        | Type    | Constraints                                                        |
-|--------------|---------|--------------------------------------------------------------------|
+| Field        | Type    | Constraints                                                                                   |
+| ------------ | ------- | --------------------------------------------------------------------------------------------- |
 | `token_hash` | TEXT    | primary key; hex-encoded SHA-256 of the session token, so the database holds no usable tokens |
-| `expires_at` | INTEGER | Unix time; expired rows are ignored and deleted                    |
+| `expires_at` | INTEGER | Unix time; expired rows are ignored and deleted                                               |
 
 ### 3.5 Seed data
 
@@ -157,17 +157,17 @@ The initial migration (`0001_init.sql`) creates:
 - the `settings` record with the defaults above;
 - nine clocks matching the mock-up, all enabled:
 
-| Order | Label            | Zone                 |
-|-------|------------------|----------------------|
-| 1     | UTC              | `UTC`                |
-| 2     | New Zealand      | `Pacific/Auckland`   |
-| 3     | India            | `Asia/Kolkata`       |
-| 4     | Melbourne/Sydney | `Australia/Sydney`   |
-| 5     | China            | `Asia/Shanghai`      |
-| 6     | Canada           | `America/Vancouver`  |
-| 7     | Philippines      | `Asia/Manila`        |
-| 8     | Russia           | `Europe/Moscow`      |
-| 9     | Ukraine          | `Europe/Kyiv`        |
+| Order | Label            | Zone                |
+| ----- | ---------------- | ------------------- |
+| 1     | UTC              | `UTC`               |
+| 2     | New Zealand      | `Pacific/Auckland`  |
+| 3     | India            | `Asia/Kolkata`      |
+| 4     | Melbourne/Sydney | `Australia/Sydney`  |
+| 5     | China            | `Asia/Shanghai`     |
+| 6     | Canada           | `America/Vancouver` |
+| 7     | Philippines      | `Asia/Manila`       |
+| 8     | Russia           | `Europe/Moscow`     |
+| 9     | Ukraine          | `Europe/Kyiv`       |
 
 The mock-up labels the red clock "G.M.T.". This design uses "UTC" to match the requirement.
 
@@ -185,6 +185,7 @@ The mock-up is a single moment, not a specification. Zones are IANA IDs, so dayl
   ```
 
   The username is the login identifier, and the operator chooses it. A valid username is a string of printable characters with no white space: one or more characters, each one printable, and none of them a space, tab, line break or other white-space character. Non-ASCII letters are allowed, and so is an email address such as `joe@example.com`. Surrounding white space is trimmed, and the username is lower-cased, before it is stored. The login form normalises input the same way, so usernames are not case-sensitive. `admin init` rejects an invalid username before it asks for the password.
+
 - `admin init` creates the database file and runs migrations if the file does not exist (section 8).
 - Replacing the account deletes all of its sessions, so existing logins end.
 - The command prompts for the password. Input is not echoed (`golang.org/x/term`), and the password must be entered twice to confirm. If the two entries differ, the command exits with status 1 and changes nothing. The password is never a command-line argument, so it does not appear in shell history.
@@ -233,28 +234,28 @@ The application runs on a VPN, so the design relies on the network for protectio
 
 ### 5.1 Public
 
-| Method | Path      | Purpose                                                    |
-|--------|-----------|------------------------------------------------------------|
-| GET    | `/`       | Full page: HTML shell, styles, font, HTMX, `app.js`; embeds the board |
-| GET    | `/board`  | Board fragment: title, grid of clocks, polling attributes   |
-| GET    | `/static/` | Embedded CSS, JavaScript and font files                  |
+| Method | Path       | Purpose                                                               |
+| ------ | ---------- | --------------------------------------------------------------------- |
+| GET    | `/`        | Full page: HTML shell, styles, font, HTMX, `app.js`; embeds the board |
+| GET    | `/board`   | Board fragment: title, grid of clocks, polling attributes             |
+| GET    | `/static/` | Embedded CSS, JavaScript and font files                               |
 
 ### 5.2 Administration
 
-| Method | Path                            | Purpose                                 |
-|--------|---------------------------------|-----------------------------------------|
-| GET    | `/admin/login`                  | Login form                              |
-| POST   | `/admin/login`                  | Authenticate and set cookie             |
-| POST   | `/admin/logout`                 | End session and clear cookie            |
-| GET    | `/admin`                        | Dashboard: clocks list and settings form |
-| GET    | `/admin/zones/new`              | New clock form                          |
-| POST   | `/admin/zones`                  | Create clock                            |
-| GET    | `/admin/zones/{id}/edit`        | Edit clock form                         |
-| POST   | `/admin/zones/{id}`             | Update clock                            |
-| POST   | `/admin/zones/{id}/toggle`      | Flip enabled/disabled                   |
-| POST   | `/admin/zones/{id}/move?dir=up\|down` | Change display order              |
-| DELETE | `/admin/zones/{id}`             | Delete clock (after `hx-confirm`)       |
-| POST   | `/admin/settings`               | Update settings                         |
+| Method | Path                                  | Purpose                                  |
+| ------ | ------------------------------------- | ---------------------------------------- |
+| GET    | `/admin/login`                        | Login form                               |
+| POST   | `/admin/login`                        | Authenticate and set cookie              |
+| POST   | `/admin/logout`                       | End session and clear cookie             |
+| GET    | `/admin`                              | Dashboard: clocks list and settings form |
+| GET    | `/admin/zones/new`                    | New clock form                           |
+| POST   | `/admin/zones`                        | Create clock                             |
+| GET    | `/admin/zones/{id}/edit`              | Edit clock form                          |
+| POST   | `/admin/zones/{id}`                   | Update clock                             |
+| POST   | `/admin/zones/{id}/toggle`            | Flip enabled/disabled                    |
+| POST   | `/admin/zones/{id}/move?dir=up\|down` | Change display order                     |
+| DELETE | `/admin/zones/{id}`                   | Delete clock (after `hx-confirm`)        |
+| POST   | `/admin/settings`                     | Update settings                          |
 
 **Responses**
 
@@ -272,10 +273,12 @@ The dashboard is a full page. Its regions are `#zones` (clock list), the form re
 The whole board is one wrapper element containing the title, the grid, and the polling attributes:
 
 ```html
-<div id="board"
-     hx-get="/board"
-     hx-trigger="every {{.RefreshSeconds}}s"
-     hx-swap="outerHTML">
+<div
+  id="board"
+  hx-get="/board"
+  hx-trigger="every {{.RefreshSeconds}}s"
+  hx-swap="outerHTML"
+>
   ...
 </div>
 ```
@@ -325,14 +328,14 @@ Each poll replaces the entire wrapper. A change to the title, colours or refresh
 
 The board is configured entirely from the admin dashboard. There are no environment variables or config files. The command-line options are:
 
-| Command / flag                    | Default            | Purpose                                              |
-|-----------------------------------|--------------------|------------------------------------------------------|
-| `serve --addr`                    | `127.0.0.1:8080`   | HTTP listen address. Set it to a VPN address to reach the board from other machines (section 4.3) |
-| `serve --db`                      | `./noticeboard.db` | SQLite file; created and migrated on start           |
-| `serve --log`                     | `./noticeboard.log` | Audit log file (section 4.4)                        |
-| `serve --gui`                     | off                | Open the board in an app-mode window (section 9)     |
-| `admin init <username>`           | —                  | Create or replace the admin account; prompts for password (section 4.1) |
-| `admin init --db`                 | `./noticeboard.db` | Same file as `serve --db`; created and migrated if absent |
+| Command / flag          | Default             | Purpose                                                                                           |
+| ----------------------- | ------------------- | ------------------------------------------------------------------------------------------------- |
+| `serve --addr`          | `127.0.0.1:8080`    | HTTP listen address. Set it to a VPN address to reach the board from other machines (section 4.3) |
+| `serve --db`            | `./noticeboard.db`  | SQLite file; created and migrated on start                                                        |
+| `serve --log`           | `./noticeboard.log` | Audit log file (section 4.4)                                                                      |
+| `serve --launch`        | off                 | Open the board in an app-mode window (section 9)                                                  |
+| `admin init <username>` | —                   | Create or replace the admin account; prompts for password (section 4.1)                           |
+| `admin init --db`       | `./noticeboard.db`  | Same file as `serve --db`; created and migrated if absent                                         |
 
 **Usage and exit codes**
 
@@ -346,7 +349,7 @@ The board is configured entirely from the admin dashboard. There are no environm
 
 ## 9. Desktop mode
 
-- `noticeboard serve --gui` starts the HTTP server, and once it is listening, opens `/` (the board) in a browser app-mode window.
+- `noticeboard serve --launch` starts the HTTP server, and once it is listening, opens `/` (the board) in a browser app-mode window.
 - The launcher is adapted from `htmx-todos/gui.go`. It tries, in order, Edge or Chrome in app mode on Windows; Chrome, Chromium, Brave or `xdg-open` on Linux; and Chrome or `open` on macOS.
 - It requires no webview library. The launcher is plain Go, and the binary needs no CGO (section 2).
 
@@ -358,20 +361,20 @@ The board is configured entirely from the admin dashboard. There are no environm
 - If no browser is found, the URL is printed to stdout and the server keeps running. On Windows the search is for Edge or Chrome, on PATH or at their standard install locations, and there is no fallback to the default browser.
 - The window opens only after the server is listening. A listen failure other than an address already in use exits with status 1 and no window opens.
 - A listen address whose host is unspecified (`0.0.0.0` or `::`) is opened as `127.0.0.1`.
-- If the listen address is in use, `serve` exits with status 1 and no window opens, unless `--gui` is given. With `--gui`, a message is printed and the board is opened in a browser window, and the command exits with status 0. The address is assumed to be a running noticeboard. The command does not check this.
+- If the listen address is in use, `serve` exits with status 1 and no window opens, unless `--launch` is given. With `--launch`, a message is printed and the board is opened in a browser window, and the command exits with status 0. The address is assumed to be a running noticeboard. The command does not check this.
 
 ## 10. Build, run and tasks
 
 Tools are managed by [mise](https://mise.jdx.dev/) (`mise.toml`).
 
-| Task       | Purpose                                                      |
-|------------|--------------------------------------------------------------|
-| `run`      | Development server with reload on `.go` and `templates/` changes (wgo) |
-| `run-gui`  | As `run`, launching the GUI window. Each reload opens a new window; this is accepted for development |
-| `build`    | `CGO_ENABLED=0 go build -o noticeboard .`                    |
-| `test`     | `go test ./...`                                              |
-| `fmt`      | `go fmt ./...`                                               |
-| `tidy`     | `go mod verify && go mod tidy`                               |
+| Task      | Purpose                                                                                              |
+| --------- | ---------------------------------------------------------------------------------------------------- |
+| `run`     | Development server with reload on `.go` and `templates/` changes (wgo)                               |
+| `run-gui` | As `run`, launching the GUI window. Each reload opens a new window; this is accepted for development |
+| `build`   | `CGO_ENABLED=0 go build -o noticeboard .`                                                            |
+| `test`    | `go test ./...`                                                                                      |
+| `fmt`     | `go fmt ./...`                                                                                       |
+| `tidy`    | `go mod verify && go mod tidy`                                                                       |
 
 The Go version is pinned in the `[tools]` section of `mise.toml`.
 
@@ -405,43 +408,43 @@ Per the project guidelines:
 6. **Admin authentication:** `admin init` command with bcrypt and username validation and normalisation; login against `admins` with the dummy-hash comparison; `sessions` rows and cookie handling; HTMX forms and `HX-Redirect`; middleware; logout; `HX-Request` check; login hint when no admin exists; `internal/auditlog` and request logging; tests against a temporary database.
 7. **Clock management:** `internal/zones` repository and validation; list, add, edit, enable/disable, move, delete with `hx-confirm`; uniqueness, the nine-enabled limit, and validation messages.
 8. **Settings UI:** form with colour pickers, number inputs and validation messages.
-9. **Desktop mode:** `serve --gui` with the launcher adapted from `htmx-todos/gui.go`.
+9. **Desktop mode:** `serve --launch` with the launcher adapted from `htmx-todos/gui.go`.
 10. **Polish:** test IDs, README run instructions (including the PocketBase reference, which is now wrong), mise tasks, the DSEG7 side-by-side check.
 
 ## 13. Decisions and assumptions
 
-| Topic | Decision |
-|---|---|
-| Web framework | None: standard library `net/http` `ServeMux` |
-| Database | SQLite via `database/sql` and `modernc.org/sqlite` (pure Go, no CGO); file `./noticeboard.db`, rollback journal (WAL disabled), 5 s busy timeout |
-| Schema migrations | Embedded SQL files, each in a transaction, applied in order; version in `PRAGMA user_version`; forward-only; newer database refused |
-| Time zone data | Embedded with `time/tzdata` |
-| Admin account | Single row in `admins`; no seeded account; created with `noticeboard admin init <username>`, which creates the database if absent and deletes all sessions |
-| Login identifier | Admin username: one or more printable characters with no white space; trimmed and lower-cased; not case-sensitive |
-| Password storage | bcrypt, `DefaultCost` (`golang.org/x/crypto/bcrypt`); non-empty, at most 72 bytes |
-| Admin password entry | Interactive no-echo prompt, entered twice (`golang.org/x/term`); never a command-line argument |
-| Login failure | Dummy-hash comparison when the username is unknown; generic 422 message |
-| Session | Random 32-byte token (base64url in cookie); hex SHA-256 stored in `sessions`; fixed 12-hour lifetime; several sessions allowed |
-| CSRF | `HX-Request` required on admin `POST`/`DELETE`; all admin forms are HTMX forms, including login and logout |
-| Expired session | HTMX requests get `401` + `HX-Redirect`; others get `303` to login |
-| Deployment | VPN; plain HTTP; no TLS; no login throttling |
-| Security headers | `nosniff`, `X-Frame-Options: DENY`, CSP `default-src 'self'`; 64 KiB body limit; 10 s header timeout; graceful shutdown |
-| Audit log | `noticeboard.log` (`serve --log`); logins and mutating admin requests; capped at 1000 lines |
-| Board size | Fixed 3×3 grid; at most nine enabled clocks; disabled clocks unlimited |
-| Clock uniqueness | Labels (trimmed) and zones are unique; zones `""` and `Local` rejected |
-| Clock ordering | Manual, via the unique `sort` field and move buttons; moving past either end is a no-op |
-| UTC clock | Exactly zone `UTC`; labels are not used |
-| Configurable board settings | Title, refresh interval, and four colours (background, label, clock, UTC); label text fixed white; title uses the label colour |
-| Colour format | `#rrggbb`, case-insensitive on input, stored lowercase |
-| Empty board | "No clocks are enabled." |
-| Live updates | HTMX polling of the whole board wrapper |
-| Poll errors | Last good board kept; "STALE" indicator outside `#board`, hidden on next successful swap |
-| Validation responses | HTTP 422 with fragment; swap enabled in `app.js` |
-| Admin responses | Success returns the clock list (`#zones`) and an out-of-band empty form region |
-| CLI | `--help` exits 0; usage errors exit 2; runtime errors exit 1 |
-| Desktop mode | Browser app-mode via `serve --gui`; no webview library; server runs until Ctrl-C/SIGTERM |
-| Font | DSEG7 Classic Bold, self-hosted WOFF2, OFL |
-| Scope | Clocks only; English only |
-| UTC label | "UTC" (mock-up says "G.M.T.") |
-| Canada zone | `America/Vancouver` (matches the mock-up during PDT; an assumption) |
-| Repository | `.gitignore` covers the binary, database and journal files, audit log, and `sessions/` |
+| Topic                       | Decision                                                                                                                                                   |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Web framework               | None: standard library `net/http` `ServeMux`                                                                                                               |
+| Database                    | SQLite via `database/sql` and `modernc.org/sqlite` (pure Go, no CGO); file `./noticeboard.db`, rollback journal (WAL disabled), 5 s busy timeout           |
+| Schema migrations           | Embedded SQL files, each in a transaction, applied in order; version in `PRAGMA user_version`; forward-only; newer database refused                        |
+| Time zone data              | Embedded with `time/tzdata`                                                                                                                                |
+| Admin account               | Single row in `admins`; no seeded account; created with `noticeboard admin init <username>`, which creates the database if absent and deletes all sessions |
+| Login identifier            | Admin username: one or more printable characters with no white space; trimmed and lower-cased; not case-sensitive                                          |
+| Password storage            | bcrypt, `DefaultCost` (`golang.org/x/crypto/bcrypt`); non-empty, at most 72 bytes                                                                          |
+| Admin password entry        | Interactive no-echo prompt, entered twice (`golang.org/x/term`); never a command-line argument                                                             |
+| Login failure               | Dummy-hash comparison when the username is unknown; generic 422 message                                                                                    |
+| Session                     | Random 32-byte token (base64url in cookie); hex SHA-256 stored in `sessions`; fixed 12-hour lifetime; several sessions allowed                             |
+| CSRF                        | `HX-Request` required on admin `POST`/`DELETE`; all admin forms are HTMX forms, including login and logout                                                 |
+| Expired session             | HTMX requests get `401` + `HX-Redirect`; others get `303` to login                                                                                         |
+| Deployment                  | VPN; plain HTTP; no TLS; no login throttling                                                                                                               |
+| Security headers            | `nosniff`, `X-Frame-Options: DENY`, CSP `default-src 'self'`; 64 KiB body limit; 10 s header timeout; graceful shutdown                                    |
+| Audit log                   | `noticeboard.log` (`serve --log`); logins and mutating admin requests; capped at 1000 lines                                                                |
+| Board size                  | Fixed 3×3 grid; at most nine enabled clocks; disabled clocks unlimited                                                                                     |
+| Clock uniqueness            | Labels (trimmed) and zones are unique; zones `""` and `Local` rejected                                                                                     |
+| Clock ordering              | Manual, via the unique `sort` field and move buttons; moving past either end is a no-op                                                                    |
+| UTC clock                   | Exactly zone `UTC`; labels are not used                                                                                                                    |
+| Configurable board settings | Title, refresh interval, and four colours (background, label, clock, UTC); label text fixed white; title uses the label colour                             |
+| Colour format               | `#rrggbb`, case-insensitive on input, stored lowercase                                                                                                     |
+| Empty board                 | "No clocks are enabled."                                                                                                                                   |
+| Live updates                | HTMX polling of the whole board wrapper                                                                                                                    |
+| Poll errors                 | Last good board kept; "STALE" indicator outside `#board`, hidden on next successful swap                                                                   |
+| Validation responses        | HTTP 422 with fragment; swap enabled in `app.js`                                                                                                           |
+| Admin responses             | Success returns the clock list (`#zones`) and an out-of-band empty form region                                                                             |
+| CLI                         | `--help` exits 0; usage errors exit 2; runtime errors exit 1                                                                                               |
+| Desktop mode                | Browser app-mode via `serve --launch`; no webview library; server runs until Ctrl-C/SIGTERM                                                                |
+| Font                        | DSEG7 Classic Bold, self-hosted WOFF2, OFL                                                                                                                 |
+| Scope                       | Clocks only; English only                                                                                                                                  |
+| UTC label                   | "UTC" (mock-up says "G.M.T.")                                                                                                                              |
+| Canada zone                 | `America/Vancouver` (matches the mock-up during PDT; an assumption)                                                                                        |
+| Repository                  | `.gitignore` covers the binary, database and journal files, audit log, and `sessions/`                                                                     |

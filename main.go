@@ -35,7 +35,7 @@ const (
 )
 
 const topUsage = `Usage:
-  noticeboard serve [--addr ADDR] [--db FILE] [--log FILE] [--gui]
+  noticeboard serve [--addr ADDR] [--db FILE] [--log FILE] [--launch]
   noticeboard admin init <username> [--db FILE]
   noticeboard --help
 
@@ -47,7 +47,7 @@ Run 'noticeboard <command> --help' for command options.
 `
 
 const serveUsage = `Usage:
-  noticeboard serve [--addr ADDR] [--db FILE] [--log FILE] [--gui]
+  noticeboard serve [--addr ADDR] [--db FILE] [--log FILE] [--launch]
 
 Run the web server.
 
@@ -55,7 +55,7 @@ Options:
   --addr ADDR  listen address (default 127.0.0.1:8080)
   --db FILE    SQLite database file (default ./noticeboard.db)
   --log FILE   audit log file (default ./noticeboard.log)
-  --gui        open the board in an app-mode browser window
+  --launch     open the board in an app-mode browser window
 `
 
 const adminUsage = `Usage:
@@ -106,7 +106,7 @@ func runServe(args []string, stdout, stderr io.Writer) int {
 	addr := fs.String("addr", defaultAddr, "listen address")
 	dbPath := fs.String("db", defaultDB, "SQLite database file")
 	logPath := fs.String("log", defaultLog, "audit log file")
-	gui := fs.Bool("gui", false, "open the board in an app-mode browser window")
+	launch := fs.Bool("launch", false, "open the board in an app-mode browser window")
 
 	positional, code, ok := parseCommand(fs, serveUsage, args, stdout, stderr)
 	if !ok {
@@ -133,15 +133,15 @@ func runServe(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 
-	// With --gui the window opens only once the server is listening. If the
+	// With --launch the window opens only once the server is listening. If the
 	// address is already in use, the board is probably running there already, so
 	// the window opens on it and the command exits with status 0.
 	var onListen func(url string)
-	if *gui {
+	if *launch {
 		onListen = func(url string) { openWindow(url, stdout, stderr) }
 	}
 	if err := serveHTTP(*addr, sqlDB, audit, stdout, onListen); err != nil {
-		if *gui && isAddrInUse(err) {
+		if *launch && isAddrInUse(err) {
 			fmt.Fprintf(stdout, "noticeboard: %s is already in use: opening in browser window\n", *addr)
 			openWindow(boardURL(*addr), stdout, stderr)
 			return 0
