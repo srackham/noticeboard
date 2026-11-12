@@ -18,15 +18,15 @@ import (
 )
 
 const (
-	adminEmail    = "Admin@Example.com"
+	adminUsername = "Admin@Example.com"
 	adminPassword = "correct horse"
-	wrongMessage  = "Email or password is incorrect."
+	wrongMessage  = "Username or password is incorrect."
 )
 
 // seedAdmin creates the administrator account used by the tests.
 func seedAdmin(t *testing.T, sqlDB *sql.DB) {
 	t.Helper()
-	if err := auth.UpsertAdmin(context.Background(), sqlDB, adminEmail, adminPassword); err != nil {
+	if err := auth.UpsertAdmin(context.Background(), sqlDB, adminUsername, adminPassword); err != nil {
 		t.Fatalf("UpsertAdmin: %v", err)
 	}
 }
@@ -48,8 +48,8 @@ func formRequest(path string, form url.Values, hx bool) *http.Request {
 }
 
 // login posts the login form as HTMX would.
-func login(h http.Handler, email, password string) *httptest.ResponseRecorder {
-	return serve(h, formRequest("/admin/login", url.Values{"email": {email}, "password": {password}}, true))
+func login(h http.Handler, username, password string) *httptest.ResponseRecorder {
+	return serve(h, formRequest("/admin/login", url.Values{"username": {username}, "password": {password}}, true))
 }
 
 // sessionCookie returns the session cookie set by rec, or nil.
@@ -89,7 +89,7 @@ func TestLoginPageShowsForm(t *testing.T) {
 	for _, want := range []string{
 		`id="login-form"`,
 		`hx-post="/admin/login"`,
-		`name="email"`,
+		`name="username"`,
 		`name="password"`,
 		`type="password"`,
 	} {
@@ -103,7 +103,7 @@ func TestLoginPageHintOnlyWithoutAdmin(t *testing.T) {
 	h, sqlDB := newTestServer(t)
 
 	body := serve(h, httptest.NewRequest(http.MethodGet, "/admin/login", nil)).Body.String()
-	if !strings.Contains(body, "noticeboard admin init &lt;email&gt;") {
+	if !strings.Contains(body, "noticeboard admin init &lt;username&gt;") {
 		t.Errorf("hint missing with no admin:\n%s", body)
 	}
 
@@ -153,7 +153,7 @@ func TestLoginCookieIsSecureOverTLS(t *testing.T) {
 	h, sqlDB := newTestServer(t)
 	seedAdmin(t, sqlDB)
 
-	req := formRequest("/admin/login", url.Values{"email": {adminEmail}, "password": {adminPassword}}, true)
+	req := formRequest("/admin/login", url.Values{"username": {adminUsername}, "password": {adminPassword}}, true)
 	req.TLS = &tls.ConnectionState{}
 	c := sessionCookie(serve(h, req))
 	if c == nil || !c.Secure {
@@ -166,15 +166,15 @@ func TestLoginFailureIsGeneric(t *testing.T) {
 	seedAdmin(t, sqlDB)
 
 	tests := []struct {
-		name, email, password string
+		name, username, password string
 	}{
-		{name: "wrong password", email: adminEmail, password: "wrong"},
-		{name: "unknown email", email: "someone@example.com", password: adminPassword},
-		{name: "empty fields", email: "", password: ""},
+		{name: "wrong password", username: adminUsername, password: "wrong"},
+		{name: "unknown username", username: "someone@example.com", password: adminPassword},
+		{name: "empty fields", username: "", password: ""},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			rec := login(h, tt.email, tt.password)
+			rec := login(h, tt.username, tt.password)
 			if rec.Code != http.StatusUnprocessableEntity {
 				t.Fatalf("status = %d, want 422", rec.Code)
 			}
@@ -194,13 +194,13 @@ func TestLoginFailureIsGeneric(t *testing.T) {
 	}
 }
 
-func TestLoginFailureEchoesEmailNotPassword(t *testing.T) {
+func TestLoginFailureEchoesUsernameNotPassword(t *testing.T) {
 	h, sqlDB := newTestServer(t)
 	seedAdmin(t, sqlDB)
 
 	body := login(h, "Typo@Example.com", "secret-password").Body.String()
 	if !strings.Contains(body, `value="Typo@Example.com"`) {
-		t.Errorf("email not kept in the form:\n%s", body)
+		t.Errorf("username not kept in the form:\n%s", body)
 	}
 	if strings.Contains(body, "secret-password") {
 		t.Error("password echoed back into the form")
@@ -211,7 +211,7 @@ func TestLoginRequiresHTMXHeader(t *testing.T) {
 	h, sqlDB := newTestServer(t)
 	seedAdmin(t, sqlDB)
 
-	req := formRequest("/admin/login", url.Values{"email": {adminEmail}, "password": {adminPassword}}, false)
+	req := formRequest("/admin/login", url.Values{"username": {adminUsername}, "password": {adminPassword}}, false)
 	rec := serve(h, req)
 	if rec.Code != http.StatusForbidden {
 		t.Errorf("status = %d, want 403", rec.Code)
@@ -223,7 +223,7 @@ func TestLoginRequiresHTMXHeader(t *testing.T) {
 
 func TestLoginRejectsOversizedBody(t *testing.T) {
 	h, _ := newTestServer(t)
-	big := url.Values{"email": {strings.Repeat("a", 70<<10)}}
+	big := url.Values{"username": {strings.Repeat("a", 70<<10)}}
 	rec := serve(h, formRequest("/admin/login", big, true))
 	if rec.Code != http.StatusRequestEntityTooLarge {
 		t.Errorf("status = %d, want 413", rec.Code)
@@ -271,7 +271,7 @@ func TestExpiredSessionIsRejected(t *testing.T) {
 func TestLoginPageRedirectsWhenLoggedIn(t *testing.T) {
 	h, sqlDB := newTestServer(t)
 	seedAdmin(t, sqlDB)
-	c := sessionCookie(login(h, adminEmail, adminPassword))
+	c := sessionCookie(login(h, adminUsername, adminPassword))
 
 	rec := serve(h, withCookie(httptest.NewRequest(http.MethodGet, "/admin/login", nil), c))
 	if rec.Code != http.StatusSeeOther || rec.Header().Get("Location") != "/admin" {
@@ -282,7 +282,7 @@ func TestLoginPageRedirectsWhenLoggedIn(t *testing.T) {
 func TestLogoutEndsSession(t *testing.T) {
 	h, sqlDB := newTestServer(t)
 	seedAdmin(t, sqlDB)
-	c := sessionCookie(login(h, adminEmail, adminPassword))
+	c := sessionCookie(login(h, adminUsername, adminPassword))
 
 	req := withCookie(httptest.NewRequest(http.MethodPost, "/admin/logout", nil), c)
 	req.Header.Set("HX-Request", "true")
@@ -308,7 +308,7 @@ func TestLogoutEndsSession(t *testing.T) {
 func TestLogoutRequiresSessionAndHTMX(t *testing.T) {
 	h, sqlDB := newTestServer(t)
 	seedAdmin(t, sqlDB)
-	c := sessionCookie(login(h, adminEmail, adminPassword))
+	c := sessionCookie(login(h, adminUsername, adminPassword))
 
 	// Without HX-Request the logout is refused and the session survives.
 	if rec := serve(h, withCookie(httptest.NewRequest(http.MethodPost, "/admin/logout", nil), c)); rec.Code != http.StatusForbidden {
@@ -333,7 +333,7 @@ func TestUnknownAdminPathNeedsSession(t *testing.T) {
 	if rec := serve(h, httptest.NewRequest(http.MethodGet, "/admin/nothing", nil)); rec.Code != http.StatusSeeOther {
 		t.Errorf("unknown path without session: status %d, want 303", rec.Code)
 	}
-	c := sessionCookie(login(h, adminEmail, adminPassword))
+	c := sessionCookie(login(h, adminUsername, adminPassword))
 	if rec := serve(h, withCookie(httptest.NewRequest(http.MethodGet, "/admin/nothing", nil), c)); rec.Code != http.StatusNotFound {
 		t.Errorf("unknown path with session: status %d, want 404", rec.Code)
 	}
@@ -382,8 +382,8 @@ func TestAuditLogRecordsLoginsAndAdminChanges(t *testing.T) {
 	serve(h, httptest.NewRequest(http.MethodGet, "/", nil))
 	serve(h, httptest.NewRequest(http.MethodGet, "/admin/login", nil))
 
-	login(h, adminEmail, "wrong")
-	rec := login(h, adminEmail, adminPassword)
+	login(h, adminUsername, "wrong")
+	rec := login(h, adminUsername, adminPassword)
 	c := sessionCookie(rec)
 	serve(h, withCookie(formRequest("/admin/logout", nil, true), c))
 
@@ -413,7 +413,7 @@ func TestAuditLogRecordsRefusedMutation(t *testing.T) {
 	h := srv.Handler()
 	seedAdmin(t, sqlDB)
 
-	serve(h, formRequest("/admin/login", url.Values{"email": {adminEmail}}, false))
+	serve(h, formRequest("/admin/login", url.Values{"username": {adminUsername}}, false))
 
 	lines := auditLines(t, logPath)
 	if len(lines) != 1 || !strings.Contains(lines[0], "POST /admin/login 403") {

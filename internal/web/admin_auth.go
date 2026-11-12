@@ -11,14 +11,14 @@ import (
 // sessionCookieName is the name of the admin session cookie (DESIGN.md section 4.2).
 const sessionCookieName = "noticeboard_session"
 
-// wrongCredentials is the message for a wrong email or password. The same text is used for both, so the response does not reveal which one was wrong.
-const wrongCredentials = "Email or password is incorrect."
+// wrongCredentials is the message for a wrong username or password. The same text is used for both, so the response does not reveal which one was wrong.
+const wrongCredentials = "Username or password is incorrect."
 
 // loginView is the data for the login page and its form fragment.
 type loginView struct {
-	Email   string // as typed, so the user can correct a typo
-	Error   string
-	NoAdmin bool // no administrator exists yet, so show the command-line hint
+	Username string // as typed, so the user can correct a typo
+	Error    string
+	NoAdmin  bool // no administrator exists yet, so show the command-line hint
 }
 
 // handleLoginPage serves the login form. A user who is already logged in is sent to the dashboard.
@@ -46,17 +46,17 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		formError(w, err)
 		return
 	}
-	typed := r.PostForm.Get("email")
-	email := auth.NormaliseEmail(typed)
+	typed := r.PostForm.Get("username")
+	username := auth.NormaliseUsername(typed)
 	ctx := r.Context()
 
-	ok, err := auth.Authenticate(ctx, s.db, email, r.PostForm.Get("password"))
+	ok, err := auth.Authenticate(ctx, s.db, username, r.PostForm.Get("password"))
 	if err != nil {
 		s.serverError(w, r, err)
 		return
 	}
 	if !ok {
-		setAuditDetail(r, "login failed "+email)
+		setAuditDetail(r, "login failed "+username)
 		view, err := s.newLoginView(r, typed, wrongCredentials)
 		if err != nil {
 			s.serverError(w, r, err)
@@ -66,7 +66,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	setAuditDetail(r, "login ok "+email)
+	setAuditDetail(r, "login ok "+username)
 	now := s.now()
 	if err := auth.DeleteExpiredSessions(ctx, s.db, now); err != nil {
 		s.serverError(w, r, err)
@@ -123,12 +123,12 @@ func (s *Server) hasSession(r *http.Request) (bool, error) {
 }
 
 // newLoginView builds the login view. It reports whether an administrator account exists.
-func (s *Server) newLoginView(r *http.Request, email, msg string) (loginView, error) {
+func (s *Server) newLoginView(r *http.Request, username, msg string) (loginView, error) {
 	exists, err := auth.AdminExists(r.Context(), s.db)
 	if err != nil {
 		return loginView{}, err
 	}
-	return loginView{Email: email, Error: msg, NoAdmin: !exists}, nil
+	return loginView{Username: username, Error: msg, NoAdmin: !exists}, nil
 }
 
 // sessionToken returns the session cookie value, or "" if there is none.

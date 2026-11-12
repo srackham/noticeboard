@@ -36,7 +36,7 @@ const (
 
 const topUsage = `Usage:
   noticeboard serve [--addr ADDR] [--db FILE] [--log FILE] [--gui]
-  noticeboard admin init <email> [--db FILE]
+  noticeboard admin init <username> [--db FILE]
   noticeboard --help
 
 Commands:
@@ -59,7 +59,7 @@ Options:
 `
 
 const adminUsage = `Usage:
-  noticeboard admin init <email> [--db FILE]
+  noticeboard admin init <username> [--db FILE]
 
 Create or replace the administrator account. The password is prompted for
 without echo; it is never taken from the command line.
@@ -69,7 +69,7 @@ Options:
 `
 
 const adminInitUsage = `Usage:
-  noticeboard admin init <email> [--db FILE]
+  noticeboard admin init <username> [--db FILE]
 
 Create or replace the administrator account.
 
@@ -169,7 +169,7 @@ func runAdminInit(args []string, stdout, stderr io.Writer) int {
 	}
 	switch {
 	case len(positional) == 0:
-		return usageFail(stderr, adminInitUsage, "missing <email>")
+		return usageFail(stderr, adminInitUsage, "missing <username>")
 	case len(positional) > 1:
 		return usageFail(stderr, adminInitUsage, fmt.Sprintf("unexpected argument %q", positional[1]))
 	}
@@ -180,7 +180,7 @@ func runAdminInit(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 	fmt.Fprintf(stdout, "noticeboard: administrator account saved for %s; existing sessions ended\n",
-		auth.NormaliseEmail(positional[0]))
+		auth.NormaliseUsername(positional[0]))
 	return 0
 }
 
@@ -190,9 +190,10 @@ type promptFunc func(prompt string) (string, error)
 // adminInit creates or replaces the administrator account. The password is
 // entered twice. If the entries differ, nothing is changed. The database is
 // opened only after the password is confirmed.
-func adminInit(dbPath, email string, prompt promptFunc) error {
-	if auth.NormaliseEmail(email) == "" {
-		return auth.ErrEmptyEmail
+func adminInit(dbPath, username string, prompt promptFunc) error {
+	// Check the username before the password is asked for.
+	if err := auth.ValidateUsername(auth.NormaliseUsername(username)); err != nil {
+		return err
 	}
 	password, err := prompt("Password: ")
 	if err != nil {
@@ -214,7 +215,7 @@ func adminInit(dbPath, email string, prompt promptFunc) error {
 		return err
 	}
 	defer sqlDB.Close()
-	return auth.UpsertAdmin(context.Background(), sqlDB, email, password)
+	return auth.UpsertAdmin(context.Background(), sqlDB, username, password)
 }
 
 // promptPassword reads one line from the terminal without echo. It refuses to

@@ -66,7 +66,7 @@ noticeboard/
 │       ├── admin_zones.go  # zone CRUD, toggle, move
 │       ├── admin_settings.go
 │       └── middleware.go   # security headers, body size limit, audit logging
-├── migrations/             # 0001_init.sql (schema and seed); migrations.go embeds them
+├── migrations/             # 0001_init.sql (schema and seed), 0002_admin_username.sql; migrations.go embeds them
 ├── templates/              # html/template files (embedded)
 ├── static/
 │   ├── fonts/              # DSEG7Classic-Bold.woff2, DSEG-LICENSE.txt
@@ -133,12 +133,12 @@ A singleton: exactly one row, enforced by `CHECK (id = 1)` and created by the in
 
 ### 3.3 `admins`
 
-The single administrator account (section 4.1). `CHECK (id = 1)` limits the table to one row. It is created or replaced only by the `noticeboard admin init` command, never through the UI.
+The single administrator account (section 4.1). `CHECK (id = 1)` limits the table to one row. It is created or replaced only by the `noticeboard admin init` command, never through the UI. Migration `0002_admin_username.sql` renamed the column from `email` to `username`, so an existing account keeps its value and password.
 
 | Field           | Type    | Constraints                                              |
 |-----------------|---------|----------------------------------------------------------|
 | `id`            | INTEGER | always `1`                                               |
-| `email`         | TEXT    | required; trimmed and lower-cased before storing and before lookup |
+| `username`      | TEXT    | required; one or more printable characters with no white space; trimmed and lower-cased before storing and before lookup (section 4.1) |
 | `password_hash` | TEXT    | bcrypt hash; plaintext passwords are never stored        |
 
 ### 3.4 `sessions`
@@ -181,10 +181,10 @@ The mock-up is a single moment, not a specification. Zones are IANA IDs, so dayl
 - The operator creates or replaces it from the command line:
 
   ```
-  noticeboard admin init <email>
+  noticeboard admin init <username>
   ```
 
-  The email address is chosen by the operator. It is trimmed and lower-cased before it is stored, and the login form normalises input the same way. It is the login identifier.
+  The username is the login identifier, and the operator chooses it. A valid username is a string of printable characters with no white space: one or more characters, each one printable, and none of them a space, tab, line break or other white-space character. Non-ASCII letters are allowed, and so is an email address such as `joe@example.com`. Surrounding white space is trimmed, and the username is lower-cased, before it is stored. The login form normalises input the same way, so usernames are not case-sensitive. `admin init` rejects an invalid username before it asks for the password.
 - `admin init` creates the database file and runs migrations if the file does not exist (section 8).
 - Replacing the account deletes all of its sessions, so existing logins end.
 - The command prompts for the password. Input is not echoed (`golang.org/x/term`), and the password must be entered twice to confirm. If the two entries differ, the command exits with status 1 and changes nothing. The password is never a command-line argument, so it does not appear in shell history.
@@ -198,8 +198,8 @@ The mock-up is a single moment, not a specification. Zones are IANA IDs, so dayl
 
 ### 4.2 Login and session
 
-1. `GET /admin/login` renders the form (email and password). Like all admin forms, it is an HTMX form (see CSRF below).
-2. `POST /admin/login` normalises the email (section 4.1), looks up the admin and checks the password with `bcrypt.CompareHashAndPassword`. If the email does not match, the server still runs the comparison against a dummy bcrypt hash, so the response time does not reveal which emails exist. A failure returns HTTP 422 with the message "Email or password is incorrect.", for both a wrong email and a wrong password.
+1. `GET /admin/login` renders the form (username and password). Like all admin forms, it is an HTMX form (see CSRF below).
+2. `POST /admin/login` normalises the username (section 4.1), looks up the admin and checks the password with `bcrypt.CompareHashAndPassword`. If the username does not match, the server still runs the comparison against a dummy bcrypt hash, so the response time does not reveal which usernames exist. A failure returns HTTP 422 with the message "Username or password is incorrect.", for both a wrong username and a wrong password. A username that contains white space cannot match, so it gets the same message.
 3. On success the server generates 32 random bytes (`crypto/rand`) and sends them base64url-encoded in a cookie named `noticeboard_session`. It stores the hex SHA-256 of the token in `sessions` with an expiry 12 hours ahead. The cookie has `HttpOnly`, `SameSite=Strict` and `Path=/admin`, and `Secure` when the request arrived over TLS (`r.TLS != nil`). The response carries `HX-Redirect: /admin`. Several sessions may be active at once.
 4. `POST /admin/logout` deletes the session row, expires the cookie (`MaxAge=-1`) and responds with `HX-Redirect: /admin/login`.
 5. Sessions have a fixed 12-hour lifetime with no renewal. Expired rows are deleted at startup and on each login.
@@ -225,7 +225,7 @@ The application runs on a VPN, so the design relies on the network for protectio
 
 - `internal/auditlog` appends to the file given by `serve --log` (default `./noticeboard.log`).
 - One line is written for each login attempt, successful or not, and for each `POST` or `DELETE` request under `/admin`, including failed ones and logout. `GET` requests are not logged. Passwords are never logged.
-- Each line has the form `<RFC 3339 UTC time> <client IP> <METHOD> <path> <status> [detail]`. The client IP is the host part of `r.RemoteAddr`; proxy headers are not trusted. Login lines carry the detail `login ok <email>` or `login failed <email>`.
+- Each line has the form `<RFC 3339 UTC time> <client IP> <METHOD> <path> <status> [detail]`. The client IP is the host part of `r.RemoteAddr`; proxy headers are not trusted. Login lines carry the detail `login ok <username>` or `login failed <username>`.
 - The file holds at most 1000 lines. When a new line would exceed that, the oldest lines are removed.
 - If the log cannot be written, the error is printed to stderr and the request is still handled.
 
@@ -331,13 +331,13 @@ The board is configured entirely from the admin dashboard. There are no environm
 | `serve --db`                      | `./noticeboard.db` | SQLite file; created and migrated on start           |
 | `serve --log`                     | `./noticeboard.log` | Audit log file (section 4.4)                        |
 | `serve --gui`                     | off                | Open the board in an app-mode window (section 9)     |
-| `admin init <email>`              | —                  | Create or replace the admin account; prompts for password (section 4.1) |
+| `admin init <username>`           | —                  | Create or replace the admin account; prompts for password (section 4.1) |
 | `admin init --db`                 | `./noticeboard.db` | Same file as `serve --db`; created and migrated if absent |
 
 **Usage and exit codes**
 
 - `--help` at the top level or on any subcommand prints usage and exits with status 0.
-- No subcommand, an unknown subcommand, a missing argument (such as the email), or an unknown or invalid flag prints usage to stderr and exits with status 2.
+- No subcommand, an unknown subcommand, a missing argument (such as the username), or an unknown or invalid flag prints usage to stderr and exits with status 2.
 - Runtime failures (such as a port in use, a database error, or mismatched passwords) print a message to stderr and exit with status 1.
 - A normal `serve` shutdown exits with status 0 (section 2.2).
 
@@ -384,7 +384,7 @@ Per the project guidelines:
   - `internal/settings`: validation rules (title trimming and length, colour format, refresh range).
   - `internal/zones`: label and zone trimming, uniqueness, rejection of `""` and `Local`, the nine-enabled limit, and move at the ends of the list.
   - `internal/db`: migrations apply in order, once, and are idempotent; a newer `user_version` is refused.
-  - `internal/auth`: password hashing, email normalisation, and session expiry.
+  - `internal/auth`: password hashing, username validation and normalisation, and session expiry.
   - `internal/auditlog`: the 1000-line cap removes the oldest lines.
 - **Integration tests** use `httptest` against the routes, with a temporary SQLite file (`t.TempDir()`) and the real migrations applied.
   - Login (including the generic 422), logout, the session middleware, and the HTMX `401` + `HX-Redirect` path.
@@ -400,7 +400,7 @@ Per the project guidelines:
 3. **`internal/clock`:** time formatting and colour-class logic, test-first.
 4. **`internal/settings`:** read, validate and update the singleton, with tests.
 5. **Board:** layout, `/board` fragment, polling wrapper, CSS variables, font embedding, `app.js` (422 swap and stale indicator), `httptest` rendering tests.
-6. **Admin authentication:** `admin init` command with bcrypt and email normalisation; login against `admins` with the dummy-hash comparison; `sessions` rows and cookie handling; HTMX forms and `HX-Redirect`; middleware; logout; `HX-Request` check; login hint when no admin exists; `internal/auditlog` and request logging; tests against a temporary database.
+6. **Admin authentication:** `admin init` command with bcrypt and username validation and normalisation; login against `admins` with the dummy-hash comparison; `sessions` rows and cookie handling; HTMX forms and `HX-Redirect`; middleware; logout; `HX-Request` check; login hint when no admin exists; `internal/auditlog` and request logging; tests against a temporary database.
 7. **Clock management:** `internal/zones` repository and validation; list, add, edit, enable/disable, move, delete with `hx-confirm`; uniqueness, the nine-enabled limit, and validation messages.
 8. **Settings UI:** form with colour pickers, number inputs and validation messages.
 9. **Desktop mode:** `serve --gui` with the launcher adapted from `htmx-todos/gui.go`.
@@ -414,11 +414,11 @@ Per the project guidelines:
 | Database | SQLite via `database/sql` and `modernc.org/sqlite` (pure Go, no CGO); file `./noticeboard.db`, WAL mode, 5 s busy timeout |
 | Schema migrations | Embedded SQL files, each in a transaction, applied in order; version in `PRAGMA user_version`; forward-only; newer database refused |
 | Time zone data | Embedded with `time/tzdata` |
-| Admin account | Single row in `admins`; no seeded account; created with `noticeboard admin init <email>`, which creates the database if absent and deletes all sessions |
-| Login identifier | Admin email, trimmed and lower-cased |
+| Admin account | Single row in `admins`; no seeded account; created with `noticeboard admin init <username>`, which creates the database if absent and deletes all sessions |
+| Login identifier | Admin username: one or more printable characters with no white space; trimmed and lower-cased; not case-sensitive |
 | Password storage | bcrypt, `DefaultCost` (`golang.org/x/crypto/bcrypt`); non-empty, at most 72 bytes |
 | Admin password entry | Interactive no-echo prompt, entered twice (`golang.org/x/term`); never a command-line argument |
-| Login failure | Dummy-hash comparison when the email is unknown; generic 422 message |
+| Login failure | Dummy-hash comparison when the username is unknown; generic 422 message |
 | Session | Random 32-byte token (base64url in cookie); hex SHA-256 stored in `sessions`; fixed 12-hour lifetime; several sessions allowed |
 | CSRF | `HX-Request` required on admin `POST`/`DELETE`; all admin forms are HTMX forms, including login and logout |
 | Expired session | HTMX requests get `401` + `HX-Redirect`; others get `303` to login |

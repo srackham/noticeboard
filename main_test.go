@@ -63,18 +63,18 @@ func TestAdminInitMismatchChangesNothing(t *testing.T) {
 
 func TestAdminInitRejectsBadInput(t *testing.T) {
 	tests := []struct {
-		name, email string
-		answers     []string
-		want        error
+		name, username string
+		answers        []string
+		want           error
 	}{
-		{name: "empty email", email: "   ", answers: nil, want: auth.ErrEmptyEmail},
-		{name: "empty password", email: "admin@example.com", answers: []string{"", ""}, want: auth.ErrEmptyPassword},
-		{name: "password too long", email: "admin@example.com", answers: []string{string(make([]byte, 73))}, want: auth.ErrPasswordTooLong},
+		{name: "empty username", username: "   ", answers: nil, want: auth.ErrInvalidUsername},
+		{name: "empty password", username: "admin@example.com", answers: []string{"", ""}, want: auth.ErrEmptyPassword},
+		{name: "password too long", username: "admin@example.com", answers: []string{string(make([]byte, 73))}, want: auth.ErrPasswordTooLong},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			path := filepath.Join(t.TempDir(), "noticeboard.db")
-			err := adminInit(path, tt.email, fakePrompt(tt.answers...))
+			err := adminInit(path, tt.username, fakePrompt(tt.answers...))
 			if !errors.Is(err, tt.want) {
 				t.Errorf("adminInit error = %v, want %v", err, tt.want)
 			}

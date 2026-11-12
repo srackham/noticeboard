@@ -9,13 +9,15 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"unicode"
+	"unicode/utf8"
 
 	"golang.org/x/crypto/bcrypt"
 )
 
 // Input errors. Callers can test them with errors.Is.
 var (
-	ErrEmptyEmail      = errors.New("email must not be empty")
+	ErrInvalidUsername = errors.New("username must be one or more printable characters with no spaces")
 	ErrEmptyPassword   = errors.New("password must not be empty")
 	ErrPasswordTooLong = errors.New("password must be at most 72 bytes")
 )
@@ -23,9 +25,26 @@ var (
 // maxPasswordBytes is the most bytes bcrypt uses. Longer passwords are rejected rather than truncated.
 const maxPasswordBytes = 72
 
-// NormaliseEmail trims the email and lower-cases it. The result is the login identifier.
-func NormaliseEmail(email string) string {
-	return strings.ToLower(strings.TrimSpace(email))
+// NormaliseUsername trims surrounding white space and lower-cases the username.
+// The result is the login identifier. Usernames are not case-sensitive.
+func NormaliseUsername(username string) string {
+	return strings.ToLower(strings.TrimSpace(username))
+}
+
+// ValidateUsername reports whether a normalised username is valid. A valid
+// username is one or more printable characters, none of them white space. The
+// check is on runes, so it accepts non-ASCII letters but rejects control characters,
+// spaces, tabs, line breaks and invalid UTF-8.
+func ValidateUsername(username string) error {
+	if username == "" || !utf8.ValidString(username) {
+		return ErrInvalidUsername
+	}
+	for _, r := range username {
+		if !unicode.IsPrint(r) || unicode.IsSpace(r) {
+			return ErrInvalidUsername
+		}
+	}
+	return nil
 }
 
 // ValidatePassword reports whether pw may be used. It counts bytes, not characters.
@@ -57,7 +76,7 @@ func checkPassword(hash, pw string) bool {
 }
 
 // dummyHash is a bcrypt hash that no login can match. It is compared against
-// when the email is unknown, so a failed login takes as long as a wrong password.
+// when the username is unknown, so a failed login takes as long as a wrong password.
 // It is generated on first use, at the same cost as real hashes.
 var (
 	dummyOnce sync.Once
@@ -72,20 +91,20 @@ func getDummyHash() ([]byte, error) {
 	return dummyHash, dummyErr
 }
 
-// Authenticate reports whether email and password match the administrator account.
-// The email is normalised first. A wrong email still runs a bcrypt comparison,
-// so the response time does not reveal which emails exist. With no account,
+// Authenticate reports whether username and password match the administrator account.
+// The username is normalised first. A wrong username still runs a bcrypt comparison,
+// so the response time does not reveal which usernames exist. With no account,
 // it returns false and no error.
-func Authenticate(ctx context.Context, db *sql.DB, email, password string) (bool, error) {
-	email = NormaliseEmail(email)
+func Authenticate(ctx context.Context, db *sql.DB, username, password string) (bool, error) {
+	username = NormaliseUsername(username)
 
-	var storedEmail, storedHash string
-	err := db.QueryRowContext(ctx, `SELECT email, password_hash FROM admins WHERE id = 1`).
-		Scan(&storedEmail, &storedHash)
+	var storedUsername, storedHash string
+	err := db.QueryRowContext(ctx, `SELECT username, password_hash FROM admins WHERE id = 1`).
+		Scan(&storedUsername, &storedHash)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return false, fmt.Errorf("read admin: %w", err)
 	}
-	known := err == nil && email == storedEmail
+	known := err == nil && username == storedUsername
 
 	hash := storedHash
 	if !known {
@@ -109,12 +128,12 @@ func AdminExists(ctx context.Context, db *sql.DB) (bool, error) {
 }
 
 // UpsertAdmin creates the administrator account, or replaces it if one exists.
-// The email is normalised and the password is hashed. In one transaction it
+// The username is normalised and the password is hashed. In one transaction it
 // also deletes every session, so existing logins end.
-func UpsertAdmin(ctx context.Context, db *sql.DB, email, password string) error {
-	email = NormaliseEmail(email)
-	if email == "" {
-		return ErrEmptyEmail
+func UpsertAdmin(ctx context.Context, db *sql.DB, username, password string) error {
+	username = NormaliseUsername(username)
+	if err := ValidateUsername(username); err != nil {
+		return err
 	}
 	hash, err := HashPassword(password)
 	if err != nil {
@@ -128,9 +147,9 @@ func UpsertAdmin(ctx context.Context, db *sql.DB, email, password string) error 
 	defer tx.Rollback() // no-op after a successful Commit
 
 	if _, err := tx.ExecContext(ctx, `
-		INSERT INTO admins (id, email, password_hash) VALUES (1, ?, ?)
-		ON CONFLICT(id) DO UPDATE SET email = excluded.email, password_hash = excluded.password_hash`,
-		email, hash); err != nil {
+		INSERT INTO admins (id, username, password_hash) VALUES (1, ?, ?)
+		ON CONFLICT(id) DO UPDATE SET username = excluded.username, password_hash = excluded.password_hash`,
+		username, hash); err != nil {
 		return fmt.Errorf("save admin: %w", err)
 	}
 	if _, err := tx.ExecContext(ctx, `DELETE FROM sessions`); err != nil {

@@ -24,7 +24,7 @@ func openTestDB(t *testing.T) *sql.DB {
 	return sqlDB
 }
 
-func TestNormaliseEmail(t *testing.T) {
+func TestNormaliseUsername(t *testing.T) {
 	tests := []struct {
 		in, want string
 	}{
@@ -35,8 +35,8 @@ func TestNormaliseEmail(t *testing.T) {
 		{"", ""},
 	}
 	for _, tt := range tests {
-		if got := NormaliseEmail(tt.in); got != tt.want {
-			t.Errorf("NormaliseEmail(%q) = %q, want %q", tt.in, got, tt.want)
+		if got := NormaliseUsername(tt.in); got != tt.want {
+			t.Errorf("NormaliseUsername(%q) = %q, want %q", tt.in, got, tt.want)
 		}
 	}
 }
@@ -94,18 +94,18 @@ func TestAuthenticate(t *testing.T) {
 	}
 
 	tests := []struct {
-		name, email, password string
-		want                  bool
+		name, username, password string
+		want                     bool
 	}{
-		{name: "right email and password", email: "admin@example.com", password: "correct horse", want: true},
-		{name: "email is normalised", email: "  ADMIN@example.com ", password: "correct horse", want: true},
-		{name: "wrong password", email: "admin@example.com", password: "wrong"},
-		{name: "unknown email", email: "other@example.com", password: "correct horse"},
-		{name: "empty input", email: "", password: ""},
+		{name: "right username and password", username: "admin@example.com", password: "correct horse", want: true},
+		{name: "username is normalised", username: "  ADMIN@example.com ", password: "correct horse", want: true},
+		{name: "wrong password", username: "admin@example.com", password: "wrong"},
+		{name: "unknown username", username: "other@example.com", password: "correct horse"},
+		{name: "empty input", username: "", password: ""},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := Authenticate(ctx, database, tt.email, tt.password)
+			got, err := Authenticate(ctx, database, tt.username, tt.password)
 			if err != nil {
 				t.Fatalf("Authenticate: %v", err)
 			}
@@ -190,17 +190,17 @@ func TestUpsertAdminEndsExistingSessions(t *testing.T) {
 func TestUpsertAdminRejectsInvalidInput(t *testing.T) {
 	ctx := context.Background()
 	tests := []struct {
-		name, email, password string
-		want                  error
+		name, username, password string
+		want                     error
 	}{
-		{name: "empty email", email: "  ", password: "pw", want: ErrEmptyEmail},
-		{name: "empty password", email: "admin@example.com", password: "", want: ErrEmptyPassword},
-		{name: "password too long", email: "admin@example.com", password: strings.Repeat("a", 73), want: ErrPasswordTooLong},
+		{name: "empty username", username: "  ", password: "pw", want: ErrInvalidUsername},
+		{name: "empty password", username: "admin@example.com", password: "", want: ErrEmptyPassword},
+		{name: "password too long", username: "admin@example.com", password: strings.Repeat("a", 73), want: ErrPasswordTooLong},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			database := openTestDB(t)
-			err := UpsertAdmin(ctx, database, tt.email, tt.password)
+			err := UpsertAdmin(ctx, database, tt.username, tt.password)
 			if !errors.Is(err, tt.want) {
 				t.Fatalf("UpsertAdmin error = %v, want %v", err, tt.want)
 			}
@@ -218,12 +218,12 @@ func TestUpsertAdminStoresHashNotPassword(t *testing.T) {
 		t.Fatalf("UpsertAdmin: %v", err)
 	}
 
-	var email, hash string
-	if err := database.QueryRow(`SELECT email, password_hash FROM admins WHERE id = 1`).Scan(&email, &hash); err != nil {
+	var username, hash string
+	if err := database.QueryRow(`SELECT username, password_hash FROM admins WHERE id = 1`).Scan(&username, &hash); err != nil {
 		t.Fatalf("read admin: %v", err)
 	}
-	if email != "admin@example.com" {
-		t.Errorf("stored email = %q, want normalised", email)
+	if username != "admin@example.com" {
+		t.Errorf("stored username = %q, want normalised", username)
 	}
 	if hash == "plain secret" || !strings.HasPrefix(hash, "$2") {
 		t.Errorf("stored password_hash = %q, want a bcrypt hash", hash)

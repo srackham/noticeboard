@@ -17,7 +17,7 @@ import (
 func adminSession(t *testing.T, h http.Handler, sqlDB *sql.DB) *http.Cookie {
 	t.Helper()
 	seedAdmin(t, sqlDB)
-	c := sessionCookie(login(h, adminEmail, adminPassword))
+	c := sessionCookie(login(h, adminUsername, adminPassword))
 	if c == nil {
 		t.Fatal("login did not set a session cookie")
 	}

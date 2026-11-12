@@ -21,13 +21,13 @@
 <form id="login-form" class="login-form" data-testid="login-form"
       hx-post="/admin/login" hx-target="this" hx-swap="outerHTML">
   {{with .Error}}<p class="error" role="alert" data-testid="login-error">{{.}}</p>{{end}}
-  <label for="email">Email</label>
-  <input id="email" name="email" type="email" autocomplete="username" value="{{.Email}}" required>
+  <label for="username">Username</label>
+  <input id="username" name="username" type="text" autocomplete="username" autocapitalize="off" spellcheck="false" value="{{.Username}}" required>
   <label for="password">Password</label>
   <input id="password" name="password" type="password" autocomplete="current-password" required>
   <button type="submit">Log in</button>
   {{if .NoAdmin}}<p class="hint" data-testid="admin-hint">No administrator account exists yet. Create one from the command line:
-    <code>noticeboard admin init &lt;email&gt;</code></p>{{end}}
+    <code>noticeboard admin init &lt;username&gt;</code></p>{{end}}
 </form>
 {{end}}
 

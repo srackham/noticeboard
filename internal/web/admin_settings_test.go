@@ -160,7 +160,7 @@ func TestSettingsNeedSessionAndHTMX(t *testing.T) {
 		t.Errorf("without session: status = %d, want 401", rec.Code)
 	}
 
-	c := sessionCookie(login(h, adminEmail, adminPassword))
+	c := sessionCookie(login(h, adminUsername, adminPassword))
 	req = withCookie(httptest.NewRequest(http.MethodPost, "/admin/settings", strings.NewReader(validSettingsForm().Encode())), c)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	if rec := serve(h, req); rec.Code != http.StatusForbidden {
