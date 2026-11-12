@@ -116,10 +116,6 @@ func runServe(args []string, stdout, stderr io.Writer) int {
 		return usageFail(stderr, serveUsage, fmt.Sprintf("unexpected argument %q", positional[0]))
 	}
 
-	if *gui {
-		fmt.Fprintln(stderr, "noticeboard: --gui is not implemented yet")
-		return 1
-	}
 	sqlDB, err := db.Open(*dbPath)
 	if err != nil {
 		fmt.Fprintf(stderr, "noticeboard: %v\n", err)
@@ -137,7 +133,19 @@ func runServe(args []string, stdout, stderr io.Writer) int {
 		return 1
 	}
 
-	if err := serveHTTP(*addr, sqlDB, audit, stdout); err != nil {
+	// With --gui the window opens only once the server is listening. If the
+	// address is already in use, the board is probably running there already, so
+	// the window opens on it and the command exits with status 0.
+	var onListen func(url string)
+	if *gui {
+		onListen = func(url string) { openWindow(url, stdout, stderr) }
+	}
+	if err := serveHTTP(*addr, sqlDB, audit, stdout, onListen); err != nil {
+		if *gui && isAddrInUse(err) {
+			fmt.Fprintf(stdout, "noticeboard: %s is already in use: opening in browser window\n", *addr)
+			openWindow(boardURL(*addr), stdout, stderr)
+			return 0
+		}
 		fmt.Fprintf(stderr, "noticeboard: %v\n", err)
 		return 1
 	}
@@ -237,7 +245,10 @@ func promptPassword(stderr io.Writer, prompt string) (string, error) {
 
 // serveHTTP listens on addr and serves until SIGINT or SIGTERM, then shuts
 // down gracefully.
-func serveHTTP(addr string, sqlDB *sql.DB, audit *auditlog.Logger, stdout io.Writer) error {
+//
+// onListen, when not nil, is called with the board URL once the server is
+// listening. Desktop mode uses it to open the window.
+func serveHTTP(addr string, sqlDB *sql.DB, audit *auditlog.Logger, stdout io.Writer, onListen func(url string)) error {
 	site, err := web.New(sqlDB, assetFS, audit)
 	if err != nil {
 		return err
@@ -256,6 +267,10 @@ func serveHTTP(addr string, sqlDB *sql.DB, audit *auditlog.Logger, stdout io.Wri
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+
+	if onListen != nil {
+		onListen(boardURL(ln.Addr().String()))
+	}
 
 	serveErr := make(chan error, 1)
 	go func() { serveErr <- srv.Serve(ln) }()

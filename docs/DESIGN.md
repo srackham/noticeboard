@@ -355,8 +355,10 @@ The board is configured entirely from the admin dashboard. There are no environm
 - The server runs until Ctrl-C or SIGTERM. Closing the window does not stop it, because the launcher does not track the browser process.
 - On Linux, `xdg-open` cannot guarantee app mode. A normal browser tab is acceptable there.
 - Chromium-family browsers are given a dedicated profile directory under the OS temporary directory, so app mode opens even when that browser is already running.
-- If no browser is found, the URL is printed to stdout and the server keeps running.
-- If the listen address is in use, `serve` exits with status 1 and no window opens.
+- If no browser is found, the URL is printed to stdout and the server keeps running. On Windows the search is for Edge or Chrome, on PATH or at their standard install locations, and there is no fallback to the default browser.
+- The window opens only after the server is listening. A listen failure other than an address already in use exits with status 1 and no window opens.
+- A listen address whose host is unspecified (`0.0.0.0` or `::`) is opened as `127.0.0.1`.
+- If the listen address is in use, `serve` exits with status 1 and no window opens, unless `--gui` is given. With `--gui`, a message is printed and the board is opened in a browser window, and the command exits with status 0. The address is assumed to be a running noticeboard. The command does not check this.
 
 ## 10. Build, run and tasks
 
