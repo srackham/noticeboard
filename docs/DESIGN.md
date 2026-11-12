@@ -119,7 +119,7 @@ A singleton: exactly one row, enforced by `CHECK (id = 1)` and created by the in
 | Field               | Type    | Default       | Constraints                                  |
 |---------------------|---------|---------------|----------------------------------------------|
 | `id`                | INTEGER | `1`           | always `1`                                   |
-| `title`             | TEXT    | `Noticeboard` | trimmed, max 80 characters; blank hides the header |
+| `title`             | TEXT    | `World Clocks` | trimmed, max 80 characters; blank hides the header |
 | `refresh_seconds`   | INTEGER | `5`           | 1–60 (`CHECK`)                               |
 | `colour_background` | TEXT    | `#d9d9d9`     | `#rrggbb` (`CHECK` with `GLOB`)              |
 | `colour_label`      | TEXT    | `#4169e1`     | `#rrggbb`; label bar background, and the title text colour |

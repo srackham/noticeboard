@@ -3,6 +3,7 @@ go = "1.26.6"
 
 [tasks.build]
 description = "Build the noticeboard binary (no CGO)"
+depends = ["clean"]
 env = { CGO_ENABLED = "0" }
 run = "go build -o noticeboard ."
 

@@ -4,20 +4,21 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"flag"
 	"fmt"
-	"html/template"
 	"io"
-	"io/fs"
 	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+	_ "time/tzdata" // embeds the IANA zone database, so zones load without system tzdata (Windows)
 
 	"noticeboard/internal/db"
+	"noticeboard/internal/web"
 )
 
 const (
@@ -124,7 +125,7 @@ func runServe(args []string, stdout, stderr io.Writer) int {
 	}
 	defer sqlDB.Close()
 
-	if err := serveHTTP(*addr, stdout); err != nil {
+	if err := serveHTTP(*addr, sqlDB, stdout); err != nil {
 		fmt.Fprintf(stderr, "noticeboard: %v\n", err)
 		return 1
 	}
@@ -169,27 +170,14 @@ func runAdminUpsert(args []string, stdout, stderr io.Writer) int {
 
 // serveHTTP listens on addr and serves until SIGINT or SIGTERM, then shuts
 // down gracefully.
-func serveHTTP(addr string, stdout io.Writer) error {
-	templates, err := template.ParseFS(assetFS, "templates/*.html")
+func serveHTTP(addr string, sqlDB *sql.DB, stdout io.Writer) error {
+	site, err := web.New(sqlDB, assetFS)
 	if err != nil {
-		return fmt.Errorf("parse templates: %w", err)
+		return err
 	}
-	staticFS, err := fs.Sub(assetFS, "static")
-	if err != nil {
-		return fmt.Errorf("static files: %w", err)
-	}
-
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
-		// Placeholder until the board is implemented in step 5.
-		if err := templates.ExecuteTemplate(w, "index.html", nil); err != nil {
-			http.Error(w, "internal server error", http.StatusInternalServerError)
-		}
-	})
-	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServerFS(staticFS)))
 
 	srv := &http.Server{
-		Handler:           mux,
+		Handler:           site.Handler(),
 		ReadHeaderTimeout: readHeaderTimeout,
 	}
 

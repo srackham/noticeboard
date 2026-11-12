@@ -1,0 +1,17 @@
+{{define "board"}}
+<div id="board" hx-get="/board" hx-trigger="every {{.RefreshSeconds}}s" hx-swap="outerHTML"
+     data-testid="board"
+     style="--colour-background:{{.ColourBackground}}; --colour-label:{{.ColourLabel}}; --colour-clock:{{.ColourClock}}; --colour-utc:{{.ColourUTC}}">
+  {{with .Title}}<h1 class="title" data-testid="title">{{.}}</h1>{{end}}
+  <div class="grid">
+    {{- range .Clocks}}
+    <section class="tile {{.Class}}" data-testid="clock" data-zone="{{.Zone}}" data-utc="{{.UTC}}">
+      <div class="label">{{.Label}}</div>
+      <div class="value"><time datetime="{{.Time}}">{{.Time}}</time></div>
+    </section>
+    {{- else}}
+    <p class="empty" data-testid="empty">No clocks are enabled.</p>
+    {{- end}}
+  </div>
+</div>
+{{end}}

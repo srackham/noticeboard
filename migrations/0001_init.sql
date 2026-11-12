@@ -11,7 +11,7 @@ CREATE TABLE timezones (
 
 CREATE TABLE settings (
     id                INTEGER PRIMARY KEY CHECK (id = 1),
-    title             TEXT    NOT NULL DEFAULT 'Noticeboard'
+    title             TEXT    NOT NULL DEFAULT 'World Clocks'
                               CHECK (title = trim(title) AND length(title) <= 80),
     refresh_seconds   INTEGER NOT NULL DEFAULT 5
                               CHECK (refresh_seconds BETWEEN 1 AND 60),

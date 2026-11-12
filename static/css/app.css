@@ -1,1 +1,111 @@
-/* Placeholder stylesheet. Board styles arrive in step 5. */
+/* Board styles. The colours come from custom properties set on #board
+   (DESIGN.md section 6.2). Sizes are approximate and are checked on the real
+   display (section 7). */
+
+@font-face {
+  font-family: "DSEG7 Classic";
+  src: url("/static/fonts/DSEG7Classic-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: block;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+#board {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 1vh 1vw;
+  background: var(--colour-background);
+}
+
+.title {
+  margin: 0 0 1vh;
+  text-align: center;
+  font-family: Arial, Helvetica, sans-serif;
+  font-weight: 700;
+  font-size: 4vh;
+  color: var(--colour-label);
+}
+
+.grid {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: 1vh 1vw;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.tile .label {
+  padding: 0.2vh 0.5vw;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-align: center;
+  font-family: Arial, Helvetica, sans-serif;
+  font-weight: 700;
+  font-size: min(3.2vh, 2.6vw);
+  line-height: 1.6;
+  color: #fff;
+  background: var(--colour-label);
+}
+
+.tile .value {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "DSEG7 Classic", monospace;
+  font-weight: 700;
+  font-size: min(24vh, 6.5vw);
+  line-height: 1;
+  color: var(--colour-clock);
+}
+
+.tile.utc .value {
+  color: var(--colour-utc);
+}
+
+.empty {
+  grid-column: 1 / -1;
+  grid-row: 1 / -1;
+  align-self: center;
+  justify-self: center;
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 4vh;
+}
+
+/* Shown when a poll fails. It sits outside #board so that the swap does not remove it. */
+.stale {
+  position: fixed;
+  right: 1vw;
+  bottom: 1vh;
+  padding: 0.3em 0.6em;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #fff;
+  background: #b22222;
+}
+
+.stale[hidden] {
+  display: none;
+}
