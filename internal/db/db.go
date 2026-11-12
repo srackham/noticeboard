@@ -16,12 +16,19 @@ import (
 	_ "modernc.org/sqlite" // registers the "sqlite" driver
 )
 
-// dsnOptions applies to every connection in the pool. WAL lets the server and
-// `admin init` use the file at the same time. The busy timeout makes a
-// writer wait for the other process instead of failing at once. _txlock=immediate
+// dsnOptions applies to every connection in the pool.
+//
+// journal_mode=DELETE selects the rollback journal, the SQLite default, and WAL
+// mode is not used. The mode is stored in the file, and it cannot be changed
+// inside a transaction, so it is set here on connection rather than in a
+// migration. Opening a database that is still in WAL mode converts it.
+//
+// The busy timeout makes a writer wait for the other process instead of failing
+// at once, so `admin init` can run while the server is up. With the rollback
+// journal a writer must wait for readers, so these waits are common. _txlock=immediate
 // takes the write lock when a transaction begins, so two migrators cannot
 // interleave.
-const dsnOptions = "_pragma=journal_mode(WAL)&_busy_timeout=5000&_txlock=immediate"
+const dsnOptions = "_pragma=journal_mode(DELETE)&_busy_timeout=5000&_txlock=immediate"
 
 // ErrNewerSchema reports a database whose schema version is newer than the
 // newest migration this binary knows.

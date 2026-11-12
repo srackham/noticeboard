@@ -1,4 +1,8 @@
--- 0001_init: schema and seed data (DESIGN.md sections 3.1-3.5).
+-- 0001_init: the schema and seed data (DESIGN.md sections 3.1-3.5).
+--
+-- This is the only migration. Earlier drafts were discarded before any
+-- deployment. Later schema changes go in new numbered files, which are
+-- forward-only.
 
 CREATE TABLE timezones (
     id      INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -25,9 +29,11 @@ CREATE TABLE settings (
                               CHECK (colour_utc GLOB '#[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]')
 );
 
+-- The administrator account. The username rule (printable, no white space) is
+-- enforced in Go (internal/auth), because SQLite cannot express it.
 CREATE TABLE admins (
     id            INTEGER PRIMARY KEY CHECK (id = 1),
-    email         TEXT    NOT NULL CHECK (email <> ''),
+    username      TEXT    NOT NULL CHECK (username <> ''),
     password_hash TEXT    NOT NULL CHECK (password_hash <> '')
 );
 

@@ -37,9 +37,9 @@ Reference mock-up: [`docs/time-display.png`](time-display.png)
 A single Go binary using only the standard library for HTTP and `database/sql` for storage. There is no web framework and no PocketBase.
 
 - **Routing:** the standard `ServeMux` (Go 1.22 method patterns, such as `POST /admin/zones/{id}`) serves all routes. Handlers render `html/template` fragments, and HTMX swaps them into the page.
-- **SQLite:** `database/sql` with `modernc.org/sqlite`, a pure-Go translation of SQLite. The driver is imported blank and opened as `"sqlite"`. The data file is `./noticeboard.db` by default (`--db`), opened in WAL mode with a 5-second busy timeout so that `admin init` can run while the server is running. This differs from `htmx-todos`, which uses the cgo `go-sqlite3` driver.
+- **SQLite:** `database/sql` with `modernc.org/sqlite`, a pure-Go translation of SQLite. The driver is imported blank and opened as `"sqlite"`. The data file is `./noticeboard.db` by default (`--db`), opened with the rollback journal (`journal_mode=DELETE`, not WAL) and a 5-second busy timeout so that `admin init` can run while the server is running. This differs from `htmx-todos`, which uses the cgo `go-sqlite3` driver.
 - **No CGO:** no C compiler is needed. The binary builds with `CGO_ENABLED=0`, and cross-compiles with `GOOS`/`GOARCH` alone.
-- **Schema migrations:** numbered SQL files in `migrations/`, embedded and applied in order, each in its own transaction. The applied version is stored in `PRAGMA user_version`. Migrations are forward-only. Startup refuses a database whose `user_version` is higher than the newest migration the binary knows.
+- **Schema migrations:** numbered SQL files in `migrations/`, embedded and applied in order, each in its own transaction. The applied version is stored in `PRAGMA user_version`. Migrations are forward-only: after a deployment, a schema change goes in a new numbered file. Before the first deployment, earlier migrations may be folded into `0001_init.sql`. Startup refuses a database whose `user_version` is higher than the newest migration the binary knows.
 - **Authentication:** one admin account in the database, passwords hashed with bcrypt, and server-side sessions (section 4).
 - **Logging:** an audit log of logins and mutating admin requests, in a text file (section 4.4).
 - **Embedded assets:** templates, CSS, JavaScript, `htmx.min.js` and the DSEG7 font are embedded with `go:embed`, so the binary is self-contained.
@@ -66,7 +66,7 @@ noticeboard/
 │       ├── admin_zones.go  # zone CRUD, toggle, move
 │       ├── admin_settings.go
 │       └── middleware.go   # security headers, body size limit, audit logging
-├── migrations/             # 0001_init.sql (schema and seed), 0002_admin_username.sql; migrations.go embeds them
+├── migrations/             # 0001_init.sql (schema and seed); migrations.go embeds them
 ├── templates/              # html/template files (embedded)
 ├── static/
 │   ├── fonts/              # DSEG7Classic-Bold.woff2, DSEG-LICENSE.txt
@@ -133,7 +133,7 @@ A singleton: exactly one row, enforced by `CHECK (id = 1)` and created by the in
 
 ### 3.3 `admins`
 
-The single administrator account (section 4.1). `CHECK (id = 1)` limits the table to one row. It is created or replaced only by the `noticeboard admin init` command, never through the UI. Migration `0002_admin_username.sql` renamed the column from `email` to `username`, so an existing account keeps its value and password.
+The single administrator account (section 4.1). `CHECK (id = 1)` limits the table to one row. It is created or replaced only by the `noticeboard admin init` command, never through the UI.
 
 | Field           | Type    | Constraints                                              |
 |-----------------|---------|----------------------------------------------------------|
@@ -373,7 +373,7 @@ Tools are managed by [mise](https://mise.jdx.dev/) (`mise.toml`).
 
 The Go version is pinned in the `[tools]` section of `mise.toml`.
 
-**Repository housekeeping:** `.gitignore` ignores the built binary (`noticeboard`), the database and its WAL side files (`noticeboard.db`, `noticeboard.db-*`), the audit log (`noticeboard.log`), and the `sessions/` directory of pi session exports (also `pi-session-*`), plus `SCRATCH.md`.
+**Repository housekeeping:** `.gitignore` ignores the built binary (`noticeboard`), the database and its rollback journal (`noticeboard.db`, `noticeboard.db-*`), the audit log (`noticeboard.log`), and the `sessions/` directory of pi session exports (also `pi-session-*`), plus `SCRATCH.md`.
 
 ## 11. Testing
 
@@ -396,7 +396,7 @@ Per the project guidelines:
 ## 12. Implementation plan
 
 1. **Skeleton:** `go mod init`, `mise.toml`, `.gitignore`, `main.go` with `serve` and `admin` flags, `--help` and usage errors, embedded assets, placeholder `/`, `build` task.
-2. **Database:** `internal/db` (open SQLite in WAL mode, apply migrations by `user_version`); `0001_init.sql` creating the four tables with `CHECK`, `UNIQUE` and `PRIMARY KEY` constraints, plus the settings and zone seeds.
+2. **Database:** `internal/db` (open SQLite with the rollback journal, not WAL, apply migrations by `user_version`); `0001_init.sql` creating the four tables with `CHECK`, `UNIQUE` and `PRIMARY KEY` constraints, plus the settings and zone seeds.
 3. **`internal/clock`:** time formatting and colour-class logic, test-first.
 4. **`internal/settings`:** read, validate and update the singleton, with tests.
 5. **Board:** layout, `/board` fragment, polling wrapper, CSS variables, font embedding, `app.js` (422 swap and stale indicator), `httptest` rendering tests.
@@ -411,7 +411,7 @@ Per the project guidelines:
 | Topic | Decision |
 |---|---|
 | Web framework | None: standard library `net/http` `ServeMux` |
-| Database | SQLite via `database/sql` and `modernc.org/sqlite` (pure Go, no CGO); file `./noticeboard.db`, WAL mode, 5 s busy timeout |
+| Database | SQLite via `database/sql` and `modernc.org/sqlite` (pure Go, no CGO); file `./noticeboard.db`, rollback journal (WAL disabled), 5 s busy timeout |
 | Schema migrations | Embedded SQL files, each in a transaction, applied in order; version in `PRAGMA user_version`; forward-only; newer database refused |
 | Time zone data | Embedded with `time/tzdata` |
 | Admin account | Single row in `admins`; no seeded account; created with `noticeboard admin init <username>`, which creates the database if absent and deletes all sessions |
@@ -442,4 +442,4 @@ Per the project guidelines:
 | Scope | Clocks only; English only |
 | UTC label | "UTC" (mock-up says "G.M.T.") |
 | Canada zone | `America/Vancouver` (matches the mock-up during PDT; an assumption) |
-| Repository | `.gitignore` covers the binary, database and WAL files, audit log, and `sessions/` |
+| Repository | `.gitignore` covers the binary, database and journal files, audit log, and `sessions/` |
