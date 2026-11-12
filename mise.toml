@@ -7,6 +7,18 @@ depends = ["clean"]
 env = { CGO_ENABLED = "0" }
 run = "go build -o noticeboard ."
 
+[tasks.dist]
+description = "Build Linux and Windows (amd64) binaries and checksums in dist/"
+depends = ["clean"]
+env = { CGO_ENABLED = "0" }
+run = """
+rm -rf dist
+mkdir -p dist
+GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o dist/noticeboard-linux-amd64 .
+GOOS=windows GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o dist/noticeboard-windows-amd64.exe .
+(cd dist && sha256sum noticeboard-linux-amd64 noticeboard-windows-amd64.exe > checksums-sha256.txt)
+"""
+
 [tasks.test]
 description = "Run all tests"
 run = "go test ./..."
