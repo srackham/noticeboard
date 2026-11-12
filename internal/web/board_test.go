@@ -11,15 +11,24 @@ import (
 	"testing"
 	"time"
 
+	"noticeboard/internal/auditlog"
 	"noticeboard/internal/db"
 )
 
 // fixedNow is 2024-06-01 14:05 UTC, so the expected times below are fixed.
 var fixedNow = time.Date(2024, time.June, 1, 14, 5, 0, 0, time.UTC)
 
-// newTestServer opens a fresh migrated database and returns the handler and
-// database. The real templates and static files are read from the repository root.
+// newTestServer returns the handler and a fresh migrated database, without audit logging.
 func newTestServer(t *testing.T) (http.Handler, *sql.DB) {
+	t.Helper()
+	srv, sqlDB := newServer(t, nil)
+	return srv.Handler(), sqlDB
+}
+
+// newServer opens a fresh migrated database and returns a server that uses
+// audit (which may be nil). The real templates and static files are read from
+// the repository root.
+func newServer(t *testing.T, audit *auditlog.Logger) (*Server, *sql.DB) {
 	t.Helper()
 	sqlDB, err := db.Open(filepath.Join(t.TempDir(), "test.db"))
 	if err != nil {
@@ -27,12 +36,12 @@ func newTestServer(t *testing.T) (http.Handler, *sql.DB) {
 	}
 	t.Cleanup(func() { sqlDB.Close() })
 
-	srv, err := New(sqlDB, os.DirFS("../.."))
+	srv, err := New(sqlDB, os.DirFS("../.."), audit)
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
 	srv.now = func() time.Time { return fixedNow }
-	return srv.Handler(), sqlDB
+	return srv, sqlDB
 }
 
 func get(t *testing.T, h http.Handler, path string) *httptest.ResponseRecorder {

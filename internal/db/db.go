@@ -17,7 +17,7 @@ import (
 )
 
 // dsnOptions applies to every connection in the pool. WAL lets the server and
-// `admin upsert` use the file at the same time. The busy timeout makes a
+// `admin init` use the file at the same time. The busy timeout makes a
 // writer wait for the other process instead of failing at once. _txlock=immediate
 // takes the write lock when a transaction begins, so two migrators cannot
 // interleave.

@@ -1,7 +1,6 @@
 package web
 
 import (
-	"bytes"
 	"context"
 	"log"
 	"net/http"
@@ -55,14 +54,7 @@ func (s *Server) render(w http.ResponseWriter, r *http.Request, name string) {
 		return
 	}
 
-	var buf bytes.Buffer
-	if err := s.templates.ExecuteTemplate(&buf, name, view); err != nil {
-		log.Printf("%s: render %s: %v", r.URL.Path, name, err)
-		http.Error(w, "internal server error", http.StatusInternalServerError)
-		return
-	}
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Write(buf.Bytes())
+	s.execute(w, r, name, view, http.StatusOK)
 }
 
 // loadBoard reads the settings and enabled clocks and formats each time for now.

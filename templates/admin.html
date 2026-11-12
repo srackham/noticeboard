@@ -1,0 +1,56 @@
+{{define "admin-login"}}<!DOCTYPE html>
+<html lang="en" class="admin">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Log in · Noticeboard</title>
+  <link rel="stylesheet" href="/static/css/app.css">
+  <script src="/static/js/htmx.min.js" defer></script>
+  <script src="/static/js/app.js" defer></script>
+</head>
+<body class="admin">
+  <main class="admin-main">
+    <h1>Administration</h1>
+    {{template "login-form" .}}
+  </main>
+</body>
+</html>
+{{end}}
+
+{{define "login-form"}}
+<form id="login-form" class="login-form" data-testid="login-form"
+      hx-post="/admin/login" hx-target="this" hx-swap="outerHTML">
+  {{with .Error}}<p class="error" role="alert" data-testid="login-error">{{.}}</p>{{end}}
+  <label for="email">Email</label>
+  <input id="email" name="email" type="email" autocomplete="username" value="{{.Email}}" required>
+  <label for="password">Password</label>
+  <input id="password" name="password" type="password" autocomplete="current-password" required>
+  <button type="submit">Log in</button>
+  {{if .NoAdmin}}<p class="hint" data-testid="admin-hint">No administrator account exists yet. Create one from the command line:
+    <code>noticeboard admin init &lt;email&gt;</code></p>{{end}}
+</form>
+{{end}}
+
+{{define "admin-page"}}<!DOCTYPE html>
+<html lang="en" class="admin">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Administration · Noticeboard</title>
+  <link rel="stylesheet" href="/static/css/app.css">
+  <script src="/static/js/htmx.min.js" defer></script>
+  <script src="/static/js/app.js" defer></script>
+</head>
+<body class="admin">
+  <main class="admin-main">
+    <header class="admin-bar">
+      <h1>Administration</h1>
+      <form hx-post="/admin/logout">
+        <button type="submit" data-testid="logout">Log out</button>
+      </form>
+    </header>
+    <p>Clock and settings management will appear here.</p>
+  </main>
+</body>
+</html>
+{{end}}

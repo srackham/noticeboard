@@ -37,7 +37,7 @@ Reference mock-up: [`docs/time-display.png`](time-display.png)
 A single Go binary using only the standard library for HTTP and `database/sql` for storage. There is no web framework and no PocketBase.
 
 - **Routing:** the standard `ServeMux` (Go 1.22 method patterns, such as `POST /admin/zones/{id}`) serves all routes. Handlers render `html/template` fragments, and HTMX swaps them into the page.
-- **SQLite:** `database/sql` with `modernc.org/sqlite`, a pure-Go translation of SQLite. The driver is imported blank and opened as `"sqlite"`. The data file is `./noticeboard.db` by default (`--db`), opened in WAL mode with a 5-second busy timeout so that `admin upsert` can run while the server is running. This differs from `htmx-todos`, which uses the cgo `go-sqlite3` driver.
+- **SQLite:** `database/sql` with `modernc.org/sqlite`, a pure-Go translation of SQLite. The driver is imported blank and opened as `"sqlite"`. The data file is `./noticeboard.db` by default (`--db`), opened in WAL mode with a 5-second busy timeout so that `admin init` can run while the server is running. This differs from `htmx-todos`, which uses the cgo `go-sqlite3` driver.
 - **No CGO:** no C compiler is needed. The binary builds with `CGO_ENABLED=0`, and cross-compiles with `GOOS`/`GOARCH` alone.
 - **Schema migrations:** numbered SQL files in `migrations/`, embedded and applied in order, each in its own transaction. The applied version is stored in `PRAGMA user_version`. Migrations are forward-only. Startup refuses a database whose `user_version` is higher than the newest migration the binary knows.
 - **Authentication:** one admin account in the database, passwords hashed with bcrypt, and server-side sessions (section 4).
@@ -50,7 +50,7 @@ A single Go binary using only the standard library for HTTP and `database/sql` f
 
 ```
 noticeboard/
-├── main.go                 # subcommands: serve [--addr --db --log --gui], admin upsert [--db]; --help
+├── main.go                 # subcommands: serve [--addr --db --log --gui], admin init [--db]; --help
 ├── gui.go                  # launchGUI: browser app-mode (adapted from htmx-todos)
 ├── assets.go               # go:embed for templates/ and static/
 ├── internal/
@@ -133,7 +133,7 @@ A singleton: exactly one row, enforced by `CHECK (id = 1)` and created by the in
 
 ### 3.3 `admins`
 
-The single administrator account (section 4.1). `CHECK (id = 1)` limits the table to one row. It is created or replaced only by the `noticeboard admin upsert` command, never through the UI.
+The single administrator account (section 4.1). `CHECK (id = 1)` limits the table to one row. It is created or replaced only by the `noticeboard admin init` command, never through the UI.
 
 | Field           | Type    | Constraints                                              |
 |-----------------|---------|----------------------------------------------------------|
@@ -181,11 +181,11 @@ The mock-up is a single moment, not a specification. Zones are IANA IDs, so dayl
 - The operator creates or replaces it from the command line:
 
   ```
-  noticeboard admin upsert <email>
+  noticeboard admin init <email>
   ```
 
   The email address is chosen by the operator. It is trimmed and lower-cased before it is stored, and the login form normalises input the same way. It is the login identifier.
-- `admin upsert` creates the database file and runs migrations if the file does not exist (section 8).
+- `admin init` creates the database file and runs migrations if the file does not exist (section 8).
 - Replacing the account deletes all of its sessions, so existing logins end.
 - The command prompts for the password. Input is not echoed (`golang.org/x/term`), and the password must be entered twice to confirm. If the two entries differ, the command exits with status 1 and changes nothing. The password is never a command-line argument, so it does not appear in shell history.
 - The password must not be empty. It is hashed with bcrypt (`golang.org/x/crypto/bcrypt`) at `bcrypt.DefaultCost`. bcrypt uses only the first 72 bytes, so the command rejects passwords longer than 72 bytes (bytes, not characters).
@@ -331,8 +331,8 @@ The board is configured entirely from the admin dashboard. There are no environm
 | `serve --db`                      | `./noticeboard.db` | SQLite file; created and migrated on start           |
 | `serve --log`                     | `./noticeboard.log` | Audit log file (section 4.4)                        |
 | `serve --gui`                     | off                | Open the board in an app-mode window (section 9)     |
-| `admin upsert <email>`            | —                  | Create or replace the admin account; prompts for password (section 4.1) |
-| `admin upsert --db`               | `./noticeboard.db` | Same file as `serve --db`; created and migrated if absent |
+| `admin init <email>`              | —                  | Create or replace the admin account; prompts for password (section 4.1) |
+| `admin init --db`                 | `./noticeboard.db` | Same file as `serve --db`; created and migrated if absent |
 
 **Usage and exit codes**
 
@@ -400,7 +400,7 @@ Per the project guidelines:
 3. **`internal/clock`:** time formatting and colour-class logic, test-first.
 4. **`internal/settings`:** read, validate and update the singleton, with tests.
 5. **Board:** layout, `/board` fragment, polling wrapper, CSS variables, font embedding, `app.js` (422 swap and stale indicator), `httptest` rendering tests.
-6. **Admin authentication:** `admin upsert` command with bcrypt and email normalisation; login against `admins` with the dummy-hash comparison; `sessions` rows and cookie handling; HTMX forms and `HX-Redirect`; middleware; logout; `HX-Request` check; login hint when no admin exists; `internal/auditlog` and request logging; tests against a temporary database.
+6. **Admin authentication:** `admin init` command with bcrypt and email normalisation; login against `admins` with the dummy-hash comparison; `sessions` rows and cookie handling; HTMX forms and `HX-Redirect`; middleware; logout; `HX-Request` check; login hint when no admin exists; `internal/auditlog` and request logging; tests against a temporary database.
 7. **Clock management:** `internal/zones` repository and validation; list, add, edit, enable/disable, move, delete with `hx-confirm`; uniqueness, the nine-enabled limit, and validation messages.
 8. **Settings UI:** form with colour pickers, number inputs and validation messages.
 9. **Desktop mode:** `serve --gui` with the launcher adapted from `htmx-todos/gui.go`.
@@ -414,7 +414,7 @@ Per the project guidelines:
 | Database | SQLite via `database/sql` and `modernc.org/sqlite` (pure Go, no CGO); file `./noticeboard.db`, WAL mode, 5 s busy timeout |
 | Schema migrations | Embedded SQL files, each in a transaction, applied in order; version in `PRAGMA user_version`; forward-only; newer database refused |
 | Time zone data | Embedded with `time/tzdata` |
-| Admin account | Single row in `admins`; no seeded account; created with `noticeboard admin upsert <email>`, which creates the database if absent and deletes all sessions |
+| Admin account | Single row in `admins`; no seeded account; created with `noticeboard admin init <email>`, which creates the database if absent and deletes all sessions |
 | Login identifier | Admin email, trimmed and lower-cased |
 | Password storage | bcrypt, `DefaultCost` (`golang.org/x/crypto/bcrypt`); non-empty, at most 72 bytes |
 | Admin password entry | Interactive no-echo prompt, entered twice (`golang.org/x/term`); never a command-line argument |

@@ -17,6 +17,10 @@ import (
 	"time"
 	_ "time/tzdata" // embeds the IANA zone database, so zones load without system tzdata (Windows)
 
+	"golang.org/x/term"
+
+	"noticeboard/internal/auditlog"
+	"noticeboard/internal/auth"
 	"noticeboard/internal/db"
 	"noticeboard/internal/web"
 )
@@ -32,7 +36,7 @@ const (
 
 const topUsage = `Usage:
   noticeboard serve [--addr ADDR] [--db FILE] [--log FILE] [--gui]
-  noticeboard admin upsert <email> [--db FILE]
+  noticeboard admin init <email> [--db FILE]
   noticeboard --help
 
 Commands:
@@ -55,7 +59,7 @@ Options:
 `
 
 const adminUsage = `Usage:
-  noticeboard admin upsert <email> [--db FILE]
+  noticeboard admin init <email> [--db FILE]
 
 Create or replace the administrator account. The password is prompted for
 without echo; it is never taken from the command line.
@@ -64,8 +68,8 @@ Options:
   --db FILE    SQLite database file (default ./noticeboard.db)
 `
 
-const adminUpsertUsage = `Usage:
-  noticeboard admin upsert <email> [--db FILE]
+const adminInitUsage = `Usage:
+  noticeboard admin init <email> [--db FILE]
 
 Create or replace the administrator account.
 
@@ -112,8 +116,6 @@ func runServe(args []string, stdout, stderr io.Writer) int {
 		return usageFail(stderr, serveUsage, fmt.Sprintf("unexpected argument %q", positional[0]))
 	}
 
-	// The audit log is wired in step 6.
-	_ = logPath
 	if *gui {
 		fmt.Fprintln(stderr, "noticeboard: --gui is not implemented yet")
 		return 1
@@ -125,7 +127,17 @@ func runServe(args []string, stdout, stderr io.Writer) int {
 	}
 	defer sqlDB.Close()
 
-	if err := serveHTTP(*addr, sqlDB, stdout); err != nil {
+	if err := auth.DeleteExpiredSessions(context.Background(), sqlDB, time.Now()); err != nil {
+		fmt.Fprintf(stderr, "noticeboard: %v\n", err)
+		return 1
+	}
+	audit, err := auditlog.Open(*logPath)
+	if err != nil {
+		fmt.Fprintf(stderr, "noticeboard: %v\n", err)
+		return 1
+	}
+
+	if err := serveHTTP(*addr, sqlDB, audit, stdout); err != nil {
 		fmt.Fprintf(stderr, "noticeboard: %v\n", err)
 		return 1
 	}
@@ -140,38 +152,92 @@ func runAdmin(args []string, stdout, stderr io.Writer) int {
 	case "-h", "-help", "--help":
 		fmt.Fprint(stdout, adminUsage)
 		return 0
-	case "upsert":
-		return runAdminUpsert(args[1:], stdout, stderr)
+	case "init":
+		return runAdminInit(args[1:], stdout, stderr)
 	default:
 		return usageFail(stderr, adminUsage, fmt.Sprintf("unknown admin subcommand %q", args[0]))
 	}
 }
 
-func runAdminUpsert(args []string, stdout, stderr io.Writer) int {
-	fs := flag.NewFlagSet("admin upsert", flag.ContinueOnError)
+func runAdminInit(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("admin init", flag.ContinueOnError)
 	dbPath := fs.String("db", defaultDB, "SQLite database file")
 
-	positional, code, ok := parseCommand(fs, adminUpsertUsage, args, stdout, stderr)
+	positional, code, ok := parseCommand(fs, adminInitUsage, args, stdout, stderr)
 	if !ok {
 		return code
 	}
 	switch {
 	case len(positional) == 0:
-		return usageFail(stderr, adminUpsertUsage, "missing <email>")
+		return usageFail(stderr, adminInitUsage, "missing <email>")
 	case len(positional) > 1:
-		return usageFail(stderr, adminUpsertUsage, fmt.Sprintf("unexpected argument %q", positional[1]))
+		return usageFail(stderr, adminInitUsage, fmt.Sprintf("unexpected argument %q", positional[1]))
 	}
 
-	// Step 1 skeleton: account creation is implemented in step 6.
-	_ = dbPath
-	fmt.Fprintln(stderr, "noticeboard: admin upsert is not implemented yet")
-	return 1
+	prompt := func(p string) (string, error) { return promptPassword(stderr, p) }
+	if err := adminInit(*dbPath, positional[0], prompt); err != nil {
+		fmt.Fprintf(stderr, "noticeboard: %v\n", err)
+		return 1
+	}
+	fmt.Fprintf(stdout, "noticeboard: administrator account saved for %s; existing sessions ended\n",
+		auth.NormaliseEmail(positional[0]))
+	return 0
+}
+
+// promptFunc reads a line of secret input, for example without echo.
+type promptFunc func(prompt string) (string, error)
+
+// adminInit creates or replaces the administrator account. The password is
+// entered twice. If the entries differ, nothing is changed. The database is
+// opened only after the password is confirmed.
+func adminInit(dbPath, email string, prompt promptFunc) error {
+	if auth.NormaliseEmail(email) == "" {
+		return auth.ErrEmptyEmail
+	}
+	password, err := prompt("Password: ")
+	if err != nil {
+		return err
+	}
+	if err := auth.ValidatePassword(password); err != nil {
+		return err
+	}
+	again, err := prompt("Confirm password: ")
+	if err != nil {
+		return err
+	}
+	if password != again {
+		return errors.New("passwords do not match; no changes made")
+	}
+
+	sqlDB, err := db.Open(dbPath)
+	if err != nil {
+		return err
+	}
+	defer sqlDB.Close()
+	return auth.UpsertAdmin(context.Background(), sqlDB, email, password)
+}
+
+// promptPassword reads one line from the terminal without echo. It refuses to
+// run when stdin is not a terminal, so a password is never read from a pipe or
+// a file.
+func promptPassword(stderr io.Writer, prompt string) (string, error) {
+	fd := int(os.Stdin.Fd())
+	if !term.IsTerminal(fd) {
+		return "", errors.New("the password must be entered at an interactive terminal")
+	}
+	fmt.Fprint(stderr, prompt)
+	secret, err := term.ReadPassword(fd)
+	fmt.Fprintln(stderr)
+	if err != nil {
+		return "", err
+	}
+	return string(secret), nil
 }
 
 // serveHTTP listens on addr and serves until SIGINT or SIGTERM, then shuts
 // down gracefully.
-func serveHTTP(addr string, sqlDB *sql.DB, stdout io.Writer) error {
-	site, err := web.New(sqlDB, assetFS)
+func serveHTTP(addr string, sqlDB *sql.DB, audit *auditlog.Logger, stdout io.Writer) error {
+	site, err := web.New(sqlDB, assetFS, audit)
 	if err != nil {
 		return err
 	}
