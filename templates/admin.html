@@ -42,15 +42,80 @@
   <script src="/static/js/app.js" defer></script>
 </head>
 <body class="admin">
-  <main class="admin-main">
+  <main class="admin-main wide">
     <header class="admin-bar">
       <h1>Administration</h1>
       <form hx-post="/admin/logout">
         <button type="submit" data-testid="logout">Log out</button>
       </form>
     </header>
-    <p>Clock and settings management will appear here.</p>
+
+    <section class="panel" data-testid="clocks-panel">
+      <div class="panel-head">
+        <h2>Clocks</h2>
+        <button type="button" hx-get="/admin/zones/new" hx-target="#clock-form" hx-swap="innerHTML"
+                data-testid="add-clock">Add clock</button>
+      </div>
+      <div id="zones">{{template "zone-list" .}}</div>
+      <div id="clock-form" data-testid="clock-form"></div>
+    </section>
   </main>
 </body>
 </html>
+{{end}}
+
+{{define "zone-list"}}
+<p class="count" data-testid="enabled-count">{{.Enabled}} of {{.Size}} clocks enabled.</p>
+{{- if .Rows}}
+<table class="zones" data-testid="zone-table">
+  <thead>
+    <tr><th>Label</th><th>Zone</th><th>Status</th><th>Actions</th></tr>
+  </thead>
+  <tbody>
+    {{- range .Rows}}
+    <tr data-testid="zone-row" data-zone-id="{{.ID}}"{{if not .Enabled}} class="disabled"{{end}}>
+      <td>{{.Label}}</td>
+      <td>{{.Zone}}</td>
+      <td>{{if .Enabled}}Enabled{{else}}Disabled{{end}}</td>
+      <td class="actions">
+        <button type="button" hx-get="/admin/zones/{{.ID}}/edit" hx-target="#clock-form" hx-swap="innerHTML">Edit</button>
+        <button type="button" hx-post="/admin/zones/{{.ID}}/toggle" hx-swap="none">{{if .Enabled}}Disable{{else}}Enable{{end}}</button>
+        <button type="button" hx-post="/admin/zones/{{.ID}}/move?dir=up" hx-swap="none"{{if .First}} disabled{{end}}>Up</button>
+        <button type="button" hx-post="/admin/zones/{{.ID}}/move?dir=down" hx-swap="none"{{if .Last}} disabled{{end}}>Down</button>
+        <button type="button" hx-delete="/admin/zones/{{.ID}}" hx-confirm="Delete {{.Label}}?" hx-swap="none">Delete</button>
+      </td>
+    </tr>
+    {{- end}}
+  </tbody>
+</table>
+{{- else}}
+<p class="empty-list">No clocks yet.</p>
+{{- end}}
+{{end}}
+
+{{define "zone-form"}}
+<form id="zone-form" class="zone-form" data-testid="zone-form"
+      hx-post="{{.Action}}" hx-target="#clock-form" hx-swap="innerHTML">
+  <h3>{{.Heading}}</h3>
+  {{with .Error}}<p class="error" role="alert" data-testid="form-error">{{.}}</p>{{end}}
+  <label for="label">Label</label>
+  <input id="label" name="label" type="text" maxlength="60" value="{{.Label}}" required>
+  {{with index .Errors "label"}}<p class="field-error">{{.}}</p>{{end}}
+  <label for="zone">Time zone</label>
+  <input id="zone" name="zone" type="text" value="{{.Zone}}" placeholder="Australia/Sydney" required>
+  {{with index .Errors "zone"}}<p class="field-error">{{.}}</p>{{end}}
+  <div class="form-actions">
+    <button type="submit">Save</button>
+    <button type="button" data-clear-form>Cancel</button>
+  </div>
+</form>
+{{end}}
+
+{{define "clocks-oob"}}
+<div id="zones" hx-swap-oob="true">{{template "zone-list" .}}</div>
+<div id="clock-form" hx-swap-oob="true"></div>
+{{end}}
+
+{{define "form-message-oob"}}
+<div id="clock-form" hx-swap-oob="true"><p class="error" role="alert" data-testid="form-error">{{.}}</p></div>
 {{end}}

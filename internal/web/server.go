@@ -53,6 +53,16 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("POST /admin/login", requireHTMX(http.HandlerFunc(s.handleLogin)))
 	mux.Handle("POST /admin/logout", s.requireSession(requireHTMX(http.HandlerFunc(s.handleLogout))))
 	mux.Handle("GET /admin", s.requireSession(http.HandlerFunc(s.handleAdmin)))
+
+	// Clock management. Every change is a mutating request, so it also needs HX-Request.
+	mux.Handle("GET /admin/zones/new", s.requireSession(http.HandlerFunc(s.handleZoneNew)))
+	mux.Handle("POST /admin/zones", s.requireSession(requireHTMX(http.HandlerFunc(s.handleZoneCreate))))
+	mux.Handle("GET /admin/zones/{id}/edit", s.requireSession(http.HandlerFunc(s.handleZoneEdit)))
+	mux.Handle("POST /admin/zones/{id}", s.requireSession(requireHTMX(http.HandlerFunc(s.handleZoneUpdate))))
+	mux.Handle("POST /admin/zones/{id}/toggle", s.requireSession(requireHTMX(http.HandlerFunc(s.handleZoneToggle))))
+	mux.Handle("POST /admin/zones/{id}/move", s.requireSession(requireHTMX(http.HandlerFunc(s.handleZoneMove))))
+	mux.Handle("DELETE /admin/zones/{id}", s.requireSession(requireHTMX(http.HandlerFunc(s.handleZoneDelete))))
+
 	mux.Handle("/admin/", s.requireSession(http.NotFoundHandler()))
 
 	return securityHeaders(limitBody(s.auditLog(mux)))

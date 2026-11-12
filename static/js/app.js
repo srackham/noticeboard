@@ -48,4 +48,15 @@
       setStale(false);
     }
   });
+
+  // The Cancel button in a clock form empties the form region.
+  document.body.addEventListener("click", function (evt) {
+    var target = evt.target;
+    if (target && target.closest && target.closest("[data-clear-form]")) {
+      var region = document.getElementById("clock-form");
+      if (region) {
+        region.innerHTML = "";
+      }
+    }
+  });
 })();

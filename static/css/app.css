@@ -167,3 +167,103 @@ body.admin {
   font-size: 0.9rem;
   color: #444;
 }
+
+.admin-main.wide {
+  max-width: 60rem;
+}
+
+.panel {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.panel h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.count {
+  color: #444;
+}
+
+.empty-list {
+  color: #666;
+}
+
+table.zones {
+  width: 100%;
+  margin-top: 0.5rem;
+  border-collapse: collapse;
+}
+
+table.zones th,
+table.zones td {
+  padding: 0.4rem 0.5rem;
+  text-align: left;
+  vertical-align: middle;
+  border-bottom: 1px solid #e3e3e3;
+}
+
+table.zones tr.disabled td {
+  color: #888;
+}
+
+.actions {
+  white-space: nowrap;
+}
+
+.actions button,
+.panel-head button,
+.form-actions button {
+  font: inherit;
+  padding: 0.3rem 0.6rem;
+  margin-right: 0.25rem;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.zone-form {
+  display: grid;
+  gap: 0.4rem;
+  max-width: 28rem;
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #fafafa;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.zone-form h3 {
+  margin: 0 0 0.3rem;
+}
+
+.zone-form input {
+  font: inherit;
+  padding: 0.4rem;
+}
+
+.field-error {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #b22222;
+}
+
+.form-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}

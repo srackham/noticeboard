@@ -94,9 +94,9 @@ func (s *Server) handleLogout(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// handleAdmin serves the dashboard. Clock and settings management are added in later steps.
+// handleAdmin serves the dashboard: the clock list and the form region. The settings form is added in step 8.
 func (s *Server) handleAdmin(w http.ResponseWriter, r *http.Request) {
-	s.execute(w, r, "admin-page", nil, http.StatusOK)
+	s.renderClocks(w, r)
 }
 
 // requireSession lets the request through only with a valid, unexpired session.
