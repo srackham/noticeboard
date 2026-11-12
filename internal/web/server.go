@@ -63,6 +63,9 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("POST /admin/zones/{id}/move", s.requireSession(requireHTMX(http.HandlerFunc(s.handleZoneMove))))
 	mux.Handle("DELETE /admin/zones/{id}", s.requireSession(requireHTMX(http.HandlerFunc(s.handleZoneDelete))))
 
+	// Board settings.
+	mux.Handle("POST /admin/settings", s.requireSession(requireHTMX(http.HandlerFunc(s.handleSettings))))
+
 	mux.Handle("/admin/", s.requireSession(http.NotFoundHandler()))
 
 	return securityHeaders(limitBody(s.auditLog(mux)))

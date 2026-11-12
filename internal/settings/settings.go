@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 )
@@ -78,7 +79,7 @@ func Validate(s Settings) (Settings, Errors) {
 	}
 
 	if s.RefreshSeconds < MinRefresh || s.RefreshSeconds > MaxRefresh {
-		fail(FieldRefreshSeconds, fmt.Sprintf("Refresh must be a whole number of seconds from %d to %d.", MinRefresh, MaxRefresh))
+		fail(FieldRefreshSeconds, refreshMessage())
 	}
 
 	colours := []struct {
@@ -137,4 +138,50 @@ func Update(ctx context.Context, db *sql.DB, s Settings) (Settings, error) {
 		return s, fmt.Errorf("update settings: %w", err)
 	}
 	return clean, nil
+}
+
+// Input holds the settings as typed in the form. Every value is a string, so
+// that a rejected submission can be shown again exactly as it was typed.
+type Input struct {
+	Title            string
+	RefreshSeconds   string
+	ColourBackground string
+	ColourLabel      string
+	ColourClock      string
+	ColourUTC        string
+}
+
+// ParseInput parses and validates a form submission. It returns the normalised
+// Settings and, when any field is wrong, Errors. A refresh value that is not
+// a whole number is reported as a refresh error.
+func ParseInput(in Input) (Settings, Errors) {
+	s := Settings{
+		Title:            in.Title,
+		ColourBackground: in.ColourBackground,
+		ColourLabel:      in.ColourLabel,
+		ColourClock:      in.ColourClock,
+		ColourUTC:        in.ColourUTC,
+	}
+	var errs Errors
+	if n, err := strconv.Atoi(strings.TrimSpace(in.RefreshSeconds)); err == nil {
+		s.RefreshSeconds = n
+	} else {
+		errs = Errors{FieldRefreshSeconds: refreshMessage()}
+	}
+
+	clean, verrs := Validate(s)
+	for field, msg := range verrs {
+		if errs == nil {
+			errs = Errors{}
+		}
+		if _, dup := errs[field]; !dup {
+			errs[field] = msg
+		}
+	}
+	return clean, errs
+}
+
+// refreshMessage is the message for an invalid refresh interval.
+func refreshMessage() string {
+	return fmt.Sprintf("Refresh must be a whole number of seconds from %d to %d.", MinRefresh, MaxRefresh)
 }

@@ -267,3 +267,46 @@ button:disabled {
   gap: 0.5rem;
   margin-top: 0.5rem;
 }
+
+.settings-form {
+  display: grid;
+  gap: 0.8rem;
+  max-width: 36rem;
+  margin-top: 0.5rem;
+}
+
+.settings-form .field {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.settings-form input {
+  font: inherit;
+  padding: 0.3rem;
+}
+
+.settings-form input[type="color"] {
+  width: 4rem;
+  height: 2rem;
+  padding: 0.1rem;
+}
+
+.settings-form .hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.settings-form .colours {
+  display: grid;
+  gap: 0.6rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 0.6rem 1rem;
+}
+
+.notice {
+  margin: 0;
+  font-weight: 700;
+  color: #2e7d32;
+}

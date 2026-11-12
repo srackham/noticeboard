@@ -48,16 +48,6 @@ func clockAction(id int64, suffix string) string {
 	return "/admin/zones/" + strconv.FormatInt(id, 10) + suffix
 }
 
-// renderClocks serves the dashboard with the clock list filled in.
-func (s *Server) renderClocks(w http.ResponseWriter, r *http.Request) {
-	view, err := s.loadClocks(r)
-	if err != nil {
-		s.serverError(w, r, err)
-		return
-	}
-	s.execute(w, r, "admin-page", view, http.StatusOK)
-}
-
 // loadClocks reads every clock and the enabled count.
 func (s *Server) loadClocks(r *http.Request) (clocksView, error) {
 	ctx := r.Context()
