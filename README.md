@@ -1,7 +1,108 @@
 # Noticeboard Display
 
-A Web application written in Go + HTMX + SQLite to mimic the functionality of the United Seafarers Mission `GSM_Display` Windows application.
+A Web application written in Go + HTMX + SQLite to mimic the functionality of the United Seafarers Mission World Clock application.
 
-## Dependencies
+## Features
 
-- [wgo](https://github.com/bokwoon95/wgo) for live reload.
+- A public board showing up to nine world clocks in a 3×3 grid, in 24-hour `HH:MM` time. The UTC clock is red and the other clocks are green. The colours can be changed.
+- Live updates: the board refreshes itself at a configurable interval, and shows a STALE indicator if an update fails.
+- An administration dashboard, protected by login, for managing the clocks (add, edit, enable or disable, reorder, delete) and the board settings (title, colours, refresh interval).
+- Each clock's time zone is chosen from a list of IANA zones, so daylight saving is applied automatically.
+- Desktop mode: `serve --gui` opens the board in a browser app-mode window.
+- A single self-contained binary. Data is kept in one SQLite file, and building needs no C compiler.
+- An audit log of logins and changes made in the administration pages.
+
+World clocks:
+
+![World Clocks](docs/world-clocks.png)
+
+Admin dashboard:
+
+![World Clocks](docs/admin-dashboard.png)
+
+## Installation
+
+### Requirements
+
+- [mise](https://mise.jdx.dev/), which installs the Go version pinned in `mise.toml`. Alternatively, install Go 1.26.6 yourself.
+- A host clock kept accurate, for example with NTP. The board shows the host's time.
+
+### Build
+
+```sh
+mise install
+mise run build
+```
+
+This produces the `noticeboard` executable. Without mise, run:
+
+```sh
+CGO_ENABLED=0 go build -o noticeboard .
+```
+
+For another platform, set `GOOS` and `GOARCH`, for example `GOOS=windows GOARCH=amd64`.
+
+### Development
+
+- `mise run test` runs the tests.
+- `mise run fmt` formats the Go source.
+- `mise run tidy` verifies and tidies the Go modules.
+- `mise run clean` tidies the modules and removes the built executable.
+
+## Usage
+
+### Create the administrator account
+
+```sh
+./noticeboard admin init <username>
+```
+
+The username must be one or more printable characters with no spaces. The password is requested twice. It is not echoed, and it is never taken from the command line. Running `admin init` again replaces the account and ends all existing logins.
+
+### Start the server
+
+```sh
+./noticeboard serve
+```
+
+The server listens on `127.0.0.1:8080` by default. Then open:
+
+- the board at <http://127.0.0.1:8080/>
+- the administration pages at <http://127.0.0.1:8080/admin/login>
+
+Stop the server with Ctrl+c.
+
+### Desktop app mode
+
+Open the board in a local app-mode browser window:
+
+```sh
+./noticeboard serve --gui
+```
+
+## CLI
+
+Executable command syntax: `./noticeboard <command> [<options>]`
+
+Run `./noticeboard --help`, or `./noticeboard <command> --help`, for the full usage.
+
+### Commands
+
+| Command | Purpose                                               |
+| ------- | ----------------------------------------------------- |
+| `serve` | Run the web server (public board and admin dashboard) |
+| `admin` | Administration commands                               |
+
+### Options
+
+| Command      | Option        | Default             | Purpose                                                                                                                                |
+| ------------ | ------------- | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `serve`      | `--addr ADDR` | `127.0.0.1:8080`    | Listen address. Use a VPN address to reach the board from other machines.                                                              |
+| `serve`      | `--db FILE`   | `./noticeboard.db`  | SQLite database file. It is created if absent.                                                                                         |
+| `serve`      | `--log FILE`  | `./noticeboard.log` | Audit log file.                                                                                                                        |
+| `serve`      | `--gui`       | off                 | Open the board in an app-mode browser window. If the address is already in use, open the board at that address and exit with status 0. |
+| `admin init` | `--db FILE`   | `./noticeboard.db`  | Database file to create or update.                                                                                                     |
+
+### Security
+
+The server uses plain HTTP only. It has no TLS and no login throttling. Run it on a trusted network, such as a VPN, and keep the listen address off public interfaces.
