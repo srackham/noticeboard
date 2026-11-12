@@ -107,7 +107,16 @@
   <input id="label" name="label" type="text" maxlength="60" value="{{.Label}}" required>
   {{with index .Errors "label"}}<p class="field-error">{{.}}</p>{{end}}
   <label for="zone">Time zone</label>
-  <input id="zone" name="zone" type="text" value="{{.Zone}}" placeholder="Australia/Sydney" required>
+  <select id="zone" name="zone" required>
+    <option value=""{{if eq .Zone ""}} selected{{end}}>Choose a time zone</option>
+    {{- range .Groups}}
+    <optgroup label="{{.Name}}">
+      {{- range .Options}}
+      <option value="{{.Value}}"{{if .Selected}} selected{{end}}>{{.Value}}</option>
+      {{- end}}
+    </optgroup>
+    {{- end}}
+  </select>
   {{with index .Errors "zone"}}<p class="field-error">{{.}}</p>{{end}}
   <div class="form-actions">
     <button type="submit">Save</button>

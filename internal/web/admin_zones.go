@@ -3,7 +3,9 @@ package web
 import (
 	"errors"
 	"net/http"
+	"sort"
 	"strconv"
+	"strings"
 
 	"noticeboard/internal/zones"
 )
@@ -35,6 +37,68 @@ type zoneFormView struct {
 	Zone    string
 	Errors  zones.Errors // field messages, keyed by "label" or "zone"
 	Error   string       // a message for the whole form, such as a full board
+	Groups  []zoneGroup  // the time zone drop-down, set by executeZoneForm
+}
+
+// zoneOption is one entry in the time zone drop-down.
+type zoneOption struct {
+	Value    string
+	Selected bool
+}
+
+// zoneGroup is one optgroup of the drop-down: the zones of one region, such as "Europe".
+type zoneGroup struct {
+	Name    string
+	Options []zoneOption
+}
+
+// zoneGroups groups zone names by their first path segment, so "Europe/London"
+// falls under "Europe". Names with no segment, such as "UTC", go under "Other",
+// which is listed last. current is always included, so a stored zone that the
+// list does not offer is still shown, and it is marked selected.
+func zoneGroups(names []string, current string) []zoneGroup {
+	seen := make(map[string]bool, len(names)+1)
+	var all []string
+	for _, n := range names {
+		if !seen[n] {
+			seen[n] = true
+			all = append(all, n)
+		}
+	}
+	if current != "" && !seen[current] {
+		all = append(all, current)
+	}
+	sort.Strings(all)
+
+	byName := map[string][]zoneOption{}
+	for _, n := range all {
+		group := "Other"
+		if i := strings.IndexByte(n, '/'); i >= 0 {
+			group = n[:i]
+		}
+		byName[group] = append(byName[group], zoneOption{Value: n, Selected: n == current})
+	}
+
+	groups := make([]zoneGroup, 0, len(byName))
+	for name, opts := range byName {
+		groups = append(groups, zoneGroup{Name: name, Options: opts})
+	}
+	sort.Slice(groups, func(i, j int) bool {
+		switch {
+		case groups[i].Name == "Other":
+			return false
+		case groups[j].Name == "Other":
+			return true
+		}
+		return groups[i].Name < groups[j].Name
+	})
+	return groups
+}
+
+// executeZoneForm renders the clock form with its time zone drop-down filled in.
+func (s *Server) executeZoneForm(w http.ResponseWriter, r *http.Request, v zoneFormView, status int) {
+	v.Groups = zoneGroups(zones.Names(), v.Zone)
+	s.execute(w, r, "zone-form", v, status)
 }
 
 // pathClockID parses the {id} path value. A malformed ID is treated as unknown.
@@ -71,7 +135,7 @@ func (s *Server) loadClocks(r *http.Request) (clocksView, error) {
 
 // handleZoneNew serves the empty new-clock form.
 func (s *Server) handleZoneNew(w http.ResponseWriter, r *http.Request) {
-	s.execute(w, r, "zone-form", zoneFormView{Heading: "New clock", Action: "/admin/zones"}, http.StatusOK)
+	s.executeZoneForm(w, r, zoneFormView{Heading: "New clock", Action: "/admin/zones"}, http.StatusOK)
 }
 
 // handleZoneEdit serves the form for an existing clock.
@@ -90,7 +154,7 @@ func (s *Server) handleZoneEdit(w http.ResponseWriter, r *http.Request) {
 		s.serverError(w, r, err)
 		return
 	}
-	s.execute(w, r, "zone-form", zoneFormView{
+	s.executeZoneForm(w, r, zoneFormView{
 		Heading: "Edit clock",
 		Action:  clockAction(id, ""),
 		Label:   z.Label,
@@ -212,5 +276,5 @@ func (s *Server) zoneFormFailure(w http.ResponseWriter, r *http.Request, err err
 		s.serverError(w, r, err)
 		return
 	}
-	s.execute(w, r, "zone-form", v, http.StatusUnprocessableEntity)
+	s.executeZoneForm(w, r, v, http.StatusUnprocessableEntity)
 }

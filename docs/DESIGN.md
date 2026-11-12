@@ -103,7 +103,7 @@ One record per clock.
 |-----------|---------|-------------------------------------------------------------|
 | `id`      | INTEGER | primary key, autoincrement (used in routes)                 |
 | `label`   | TEXT    | required, trimmed, 1–60 characters, unique (`CHECK`, `UNIQUE`) |
-| `zone`    | TEXT    | required, unique, IANA zone ID (e.g. `Australia/Sydney`); checked in Go with `time.LoadLocation`, which must not return an error. The empty string and `Local` are rejected. SQLite cannot validate zone names |
+| `zone`    | TEXT    | required, unique, IANA zone ID (e.g. `Australia/Sydney`); checked in Go with `time.LoadLocation`, which must not return an error. The empty string and `Local` are rejected. SQLite cannot validate zone names. The clock form offers a drop-down of the zones in the embedded database (`internal/zones/zonenames.txt`), grouped by region. Legacy aliases (the IANA `backward` links, such as `Asia/Calcutta`) are left out; `UTC` is kept |
 | `enabled` | INTEGER | `0` or `1`, default `1` (`CHECK`)                           |
 | `sort`    | INTEGER | required, unique; defines display order (ascending); new clocks take max + 1 |
 

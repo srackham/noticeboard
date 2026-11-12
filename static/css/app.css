@@ -251,7 +251,8 @@ button:disabled {
   margin: 0 0 0.3rem;
 }
 
-.zone-form input {
+.zone-form input,
+.zone-form select {
   font: inherit;
   padding: 0.4rem;
 }
