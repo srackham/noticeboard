@@ -12,42 +12,27 @@ A Web application written in Go + HTMX + SQLite to mimic the functionality of th
 - A single self-contained binary. Data is kept in one SQLite file, and building needs no C compiler.
 - An audit log of logins and changes made in the administration pages.
 
-World clocks:
+#### World clocks
 
 ![World Clocks](docs/world-clocks.png)
 
-Admin dashboard:
+#### Admin dashboard
 
 ![World Clocks](docs/admin-dashboard.png)
 
 ## Installation
 
-### Requirements
+The application is a single executable binary file (less than 15MB) containing the application, application resources, a web server and the SQLite database engine. The only other file is the database file which is created when the application is first executed. There are no other dependencies.
 
-- [mise](https://mise.jdx.dev/), which installs the Go version pinned in `mise.toml`. Alternatively, install Go 1.26.6 yourself.
-- A host clock kept accurate, for example with NTP. The board shows the host's time.
+See [Development](#development) if you prefer building from source instead of using prebuilt binaries.
 
-### Build
+### Linux
 
-```sh
-mise install
-mise run build
-```
+Download `noticeboard-linux-amd64` executable from the [Github distribution folder](https://github.com/srackham/noticeboard/tree/main/dist), rename it to `noticeboard` and make it executable with `chmod +x noticeboard`.
 
-This produces the `noticeboard` executable. Without mise, run:
+### Microsoft Windows
 
-```sh
-CGO_ENABLED=0 go build -o noticeboard .
-```
-
-For another platform, set `GOOS` and `GOARCH`, for example `GOOS=windows GOARCH=amd64`.
-
-### Development
-
-- `mise run test` runs the tests.
-- `mise run fmt` formats the Go source.
-- `mise run tidy` verifies and tidies the Go modules.
-- `mise run clean` tidies the modules and removes the built executable.
+Download the `noticeboard-windows-amd64.exe` executable from the [Github distribution folder](https://github.com/srackham/noticeboard/tree/main/dist), rename it to `noticeboard.exe`.
 
 ## Usage
 
@@ -57,7 +42,7 @@ For another platform, set `GOOS` and `GOARCH`, for example `GOOS=windows GOARCH=
 ./noticeboard admin init <username>
 ```
 
-The username must be one or more printable characters with no spaces. The password is requested twice. It is not echoed, and it is never taken from the command line. Running `admin init` again replaces the account and ends all existing logins.
+The username must be one or more printable characters with no spaces. The password is requested twice. It is not echoed, and it is never taken from the command line. Running `admin init` replaces the exiting account and ends all existing logins.
 
 ### Start the server
 
@@ -74,7 +59,7 @@ Stop the server with Ctrl+c.
 
 ### Desktop app mode
 
-Open the board in a local app-mode browser window:
+To open the board in a local app-mode browser window:
 
 ```sh
 ./noticeboard serve --launch
@@ -103,6 +88,35 @@ Run `./noticeboard --help`, or `./noticeboard <command> --help`, for the full us
 | `serve`      | `--launch`    | off                 | Open the board in an app-mode browser window. If the address is already in use, open the board at that address and exit with status 0. |
 | `admin init` | `--db FILE`   | `./noticeboard.db`  | Database file to create or update.                                                                                                     |
 
-### Security
+## Development
+
+### Requirements
+
+- [mise](https://mise.jdx.dev/), which installs the Go version pinned in `mise.toml`. Alternatively, install Go 1.26.6 yourself.
+- A host clock kept accurate, for example with NTP. The board shows the host's time.
+
+### Build
+
+```sh
+mise install
+mise run build
+```
+
+This produces the `noticeboard` executable. Without mise, run:
+
+```sh
+CGO_ENABLED=0 go build -o noticeboard .
+```
+
+For another platform, set `GOOS` and `GOARCH`, for example `GOOS=windows GOARCH=amd64`.
+
+### mise development tasks
+
+- `mise run test` runs the tests.
+- `mise run fmt` formats the Go source.
+- `mise run tidy` verifies and tidies the Go modules.
+- `mise run clean` tidies the modules and removes the built executable.
+
+## Security
 
 The server uses plain HTTP only. It has no TLS and no login throttling. Run it on a trusted network, such as a VPN, and keep the listen address off public interfaces.
