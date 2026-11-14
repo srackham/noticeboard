@@ -23,7 +23,7 @@ Reference mock-up: [`docs/time-display.png`](time-display.png)
 - An administration dashboard, protected by login, for managing:
   - the clocks (add, edit, enable/disable, reorder, delete);
   - the board settings (title, colours, refresh interval).
-- Run as a web server, or as a desktop-style app window with `serve --launch`.
+- Run as a web server, or as a desktop-style app window with `serve --launch`; `open <address>` opens an already-running board without starting a server.
 
 **Out of scope (for now)**
 
@@ -50,7 +50,7 @@ A single Go binary using only the standard library for HTTP and `database/sql` f
 
 ```
 noticeboard/
-├── main.go                 # subcommands: serve [--addr --db --log --launch], admin init [--db]; --help
+├── main.go                 # subcommands: serve [--addr --db --log --launch], open <address>, admin init [--db]; --help
 ├── gui.go                  # launchGUI: browser app-mode (adapted from htmx-todos)
 ├── assets.go               # go:embed for templates/ and static/
 ├── internal/
@@ -334,13 +334,14 @@ The board is configured entirely from the admin dashboard. There are no environm
 | `serve --db`            | `./noticeboard.db`  | SQLite file; created and migrated on start                                                        |
 | `serve --log`           | `./noticeboard.log` | Audit log file (section 4.4)                                                                      |
 | `serve --launch`        | off                 | Open the board in an app-mode window (section 9)                                                  |
+| `open <address>`        | —                   | Open an already-running board in an app-mode window; does not start a server (section 9)          |
 | `admin init <username>` | —                   | Create or replace the admin account; prompts for password (section 4.1)                           |
 | `admin init --db`       | `./noticeboard.db`  | Same file as `serve --db`; created and migrated if absent                                         |
 
 **Usage and exit codes**
 
 - `--help` at the top level or on any subcommand prints usage and exits with status 0.
-- No subcommand, an unknown subcommand, a missing argument (such as the username), or an unknown or invalid flag prints usage to stderr and exits with status 2.
+- No subcommand, an unknown subcommand, a missing argument (such as the username or the `open` address), or an unknown or invalid flag prints usage to stderr and exits with status 2.
 - Runtime failures (such as a port in use, a database error, or mismatched passwords) print a message to stderr and exit with status 1.
 - A normal `serve` shutdown exits with status 0 (section 2.2).
 
@@ -350,6 +351,7 @@ The board is configured entirely from the admin dashboard. There are no environm
 ## 9. Desktop mode
 
 - `noticeboard serve --launch` starts the HTTP server, and once it is listening, opens `/` (the board) in a browser app-mode window.
+- `noticeboard open <address>` opens an already-running board at that address in a browser app-mode window. It does not start a server. The address is a host and port, or a full URL.
 - The launcher is adapted from `htmx-todos/gui.go`. It tries, in order, Edge or Chrome in app mode on Windows; Chrome, Chromium, Brave or `xdg-open` on Linux; and Chrome or `open` on macOS.
 - It requires no webview library. The launcher is plain Go, and the binary needs no CGO (section 2).
 
@@ -358,9 +360,9 @@ The board is configured entirely from the admin dashboard. There are no environm
 - The server runs until Ctrl-C or SIGTERM. Closing the window does not stop it, because the launcher does not track the browser process.
 - On Linux, `xdg-open` cannot guarantee app mode. A normal browser tab is acceptable there.
 - Chromium-family browsers are given a dedicated profile directory under the OS temporary directory, so app mode opens even when that browser is already running.
-- If no browser is found, the URL is printed to stdout and the server keeps running. On Windows the search is for Edge or Chrome, on PATH or at their standard install locations, and there is no fallback to the default browser.
+- If no browser is found, the URL is printed to stdout; `serve` keeps running. On Windows the search is for Edge or Chrome, on PATH or at their standard install locations, and there is no fallback to the default browser.
 - The window opens only after the server is listening. A listen failure other than an address already in use exits with status 1 and no window opens.
-- A listen address whose host is unspecified (`0.0.0.0` or `::`) is opened as `127.0.0.1`.
+- An address whose host is unspecified (`0.0.0.0` or `::`) is opened as `127.0.0.1`.
 - If the listen address is in use, `serve` exits with status 1 and no window opens, unless `--launch` is given. With `--launch`, a message is printed and the board is opened in a browser window, and the command exits with status 0. The address is assumed to be a running noticeboard. The command does not check this.
 
 ## 10. Build, run and tasks
@@ -408,7 +410,7 @@ Per the project guidelines:
 6. **Admin authentication:** `admin init` command with bcrypt and username validation and normalisation; login against `admins` with the dummy-hash comparison; `sessions` rows and cookie handling; HTMX forms and `HX-Redirect`; middleware; logout; `HX-Request` check; login hint when no admin exists; `internal/auditlog` and request logging; tests against a temporary database.
 7. **Clock management:** `internal/zones` repository and validation; list, add, edit, enable/disable, move, delete with `hx-confirm`; uniqueness, the nine-enabled limit, and validation messages.
 8. **Settings UI:** form with colour pickers, number inputs and validation messages.
-9. **Desktop mode:** `serve --launch` with the launcher adapted from `htmx-todos/gui.go`.
+9. **Desktop mode:** `serve --launch` and `open <address>`, with the launcher adapted from `htmx-todos/gui.go`.
 10. **Polish:** test IDs, README run instructions (including the PocketBase reference, which is now wrong), mise tasks, the DSEG7 side-by-side check.
 
 ## 13. Decisions and assumptions
@@ -442,7 +444,7 @@ Per the project guidelines:
 | Validation responses        | HTTP 422 with fragment; swap enabled in `app.js`                                                                                                           |
 | Admin responses             | Success returns the clock list (`#zones`) and an out-of-band empty form region                                                                             |
 | CLI                         | `--help` exits 0; usage errors exit 2; runtime errors exit 1                                                                                               |
-| Desktop mode                | Browser app-mode via `serve --launch`; no webview library; server runs until Ctrl-C/SIGTERM                                                                |
+| Desktop mode                | Browser app-mode via `serve --launch` or `open <address>`; no webview library; `serve` runs until Ctrl-C/SIGTERM                                           |
 | Font                        | DSEG7 Classic Bold, self-hosted WOFF2, OFL                                                                                                                 |
 | Scope                       | Clocks only; English only                                                                                                                                  |
 | UTC label                   | "UTC" (mock-up says "G.M.T.")                                                                                                                              |

@@ -1,5 +1,6 @@
 // Command noticeboard serves world clocks on a public board and provides an
-// administration dashboard for managing them.
+// administration dashboard for managing them. Its open command launches an
+// already-running board in a browser window.
 package main
 
 import (
@@ -36,11 +37,13 @@ const (
 
 const topUsage = `Usage:
   noticeboard serve [--addr ADDR] [--db FILE] [--log FILE] [--launch]
+  noticeboard open <address>
   noticeboard admin init <username> [--db FILE]
   noticeboard --help
 
 Commands:
   serve    Run the web server (public board and admin dashboard)
+  open     Open the board in an app-mode browser window
   admin    Administration commands
 
 Run 'noticeboard <command> --help' for command options.
@@ -56,6 +59,13 @@ Options:
   --db FILE    SQLite database file (default ./noticeboard.db)
   --log FILE   audit log file (default ./noticeboard.log)
   --launch     open the board in an app-mode browser window
+`
+
+const openUsage = `Usage:
+  noticeboard open <address>
+
+Open the board in an app-mode browser window. The address is a host and port,
+for example 127.0.0.1:8080. A full http:// or https:// URL is also accepted.
 `
 
 const adminUsage = `Usage:
@@ -94,6 +104,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return 0
 	case "serve":
 		return runServe(args[1:], stdout, stderr)
+	case "open":
+		return runOpen(args[1:], stdout, stderr)
 	case "admin":
 		return runAdmin(args[1:], stdout, stderr)
 	default:
@@ -149,6 +161,24 @@ func runServe(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "noticeboard: %v\n", err)
 		return 1
 	}
+	return 0
+}
+
+func runOpen(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("open", flag.ContinueOnError)
+
+	positional, code, ok := parseCommand(fs, openUsage, args, stdout, stderr)
+	if !ok {
+		return code
+	}
+	switch {
+	case len(positional) == 0:
+		return usageFail(stderr, openUsage, "missing address")
+	case len(positional) > 1:
+		return usageFail(stderr, openUsage, fmt.Sprintf("unexpected argument %q", positional[1]))
+	}
+
+	openWindow(openURL(positional[0]), stdout, stderr)
 	return 0
 }
 

@@ -8,7 +8,7 @@ A Web application written in Go + HTMX + SQLite to mimic the functionality of th
 - Live updates: the board refreshes itself at a configurable interval, and shows a STALE indicator if an update fails.
 - An administration dashboard, protected by login, for managing the clocks (add, edit, enable or disable, reorder, delete) and the board settings (title, colours, refresh interval).
 - Each clock's time zone is chosen from a list of IANA zones, so daylight saving is applied automatically.
-- Desktop mode: `serve --launch` opens the board in a browser app-mode window.
+- Desktop mode: `serve --launch` opens the board in a browser app-mode window, and `open <address>` opens a board that is already running.
 - A single self-contained binary. Data is kept in one SQLite file, and building needs no C compiler.
 - An audit log of logins and changes made in the administration pages.
 
@@ -65,9 +65,17 @@ To open the board in a local app-mode browser window:
 ./noticeboard serve --launch
 ```
 
+To open a board that is already running, without starting another server:
+
+```sh
+./noticeboard open 127.0.0.1:8080
+```
+
+The address is a host and port, or a full `http://` or `https://` URL.
+
 ## CLI
 
-Executable command syntax: `./noticeboard <command> [<options>]`
+Executable command syntax: `./noticeboard <command> [<arguments>] [<options>]`
 
 Run `./noticeboard --help`, or `./noticeboard <command> --help`, for the full usage.
 
@@ -76,6 +84,7 @@ Run `./noticeboard --help`, or `./noticeboard <command> --help`, for the full us
 | Command | Purpose                                               |
 | ------- | ----------------------------------------------------- |
 | `serve` | Run the web server (public board and admin dashboard) |
+| `open`  | Open the board in an app-mode browser window          |
 | `admin` | Administration commands                               |
 
 ### Options
@@ -87,6 +96,8 @@ Run `./noticeboard --help`, or `./noticeboard <command> --help`, for the full us
 | `serve`      | `--log FILE`  | `./noticeboard.log` | Audit log file.                                                                                                                        |
 | `serve`      | `--launch`    | off                 | Open the board in an app-mode browser window. If the address is already in use, open the board at that address and exit with status 0. |
 | `admin init` | `--db FILE`   | `./noticeboard.db`  | Database file to create or update.                                                                                                     |
+
+`open` takes the target address as an argument and has no options.
 
 ## Development
 
