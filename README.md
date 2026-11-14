@@ -65,13 +65,14 @@ To open the board in a local app-mode browser window:
 ./noticeboard serve --launch
 ```
 
-To open a board that is already running, without starting another server:
+To open a board that is already running, for example on another host machine:
 
 ```sh
-./noticeboard open 127.0.0.1:8080
+./noticeboard open dell7090:8080
 ```
 
-The address is a host and port, or a full `http://` or `https://` URL.
+> [!NOTE]
+> Specify the `0.0.0.0` "any" address to allow other machines on the network to access the server.
 
 ## CLI
 
@@ -98,6 +99,10 @@ Run `./noticeboard --help`, or `./noticeboard <command> --help`, for the full us
 | `admin init` | `--db FILE`   | `./noticeboard.db`  | Database file to create or update.                                                                                                     |
 
 `open` takes the target address as an argument and has no options.
+
+## Routes
+
+See [_Routes_ in the design specification](./docs/DESIGN.md#5-routes).
 
 ## Development
 
