@@ -336,11 +336,6 @@ button:disabled {
   padding: 0.3rem 0.5rem;
 }
 
-.table-search .clear-search {
-  font-weight: 700;
-  line-height: 1;
-}
-
 .admin-nav a {
   color: #1a4fa0;
 }

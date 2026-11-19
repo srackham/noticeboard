@@ -56,23 +56,16 @@
     }
   });
 
-  // The X beside a table search box clears it and reloads the table without
-  // the filter. Submitting the enclosing HTMX form re-renders the grid.
-  document.body.addEventListener("click", function (evt) {
-    var target = evt.target;
-    var clear = target && target.closest && target.closest("[data-clear-search]");
-    if (!clear) {
+  // The search box is an <input type="search">, so the browser shows its own
+  // clear (x) button. When that empties the box, reload the table without the
+  // filter: submitting the HTMX search form re-renders the grid.
+  document.body.addEventListener("input", function (evt) {
+    var input = evt.target;
+    if (!input || input.id !== "table-search-input" || input.value !== "") {
       return;
     }
-    var form = clear.closest("form");
-    if (!form) {
-      return;
-    }
-    var input = form.querySelector('input[name="q"]');
-    if (input) {
-      input.value = "";
-    }
-    if (form.requestSubmit) {
+    var form = input.closest("form");
+    if (form && form.requestSubmit) {
       form.requestSubmit();
     }
   });

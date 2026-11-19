@@ -671,9 +671,8 @@ func TestTableSearchFormIsLeftOfAddRecord(t *testing.T) {
 		t.Error("the search form should come before the Add record button")
 	}
 	for _, want := range []string{
-		`id="table-search-input" name="q"`,
+		`id="table-search-input" name="q" type="search"`,
 		`data-testid="search-button">Search</button>`,
-		`data-clear-search`,
 		`hx-get="` + timezonesPath + `"`,
 	} {
 		if !strings.Contains(body, want) {
