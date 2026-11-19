@@ -19,6 +19,25 @@ GOOS=windows GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o dist/noticeboar
 (cd dist && sha256sum noticeboard-linux-amd64 noticeboard-windows-amd64.exe > checksums-sha256.txt)
 """
 
+[tasks.release]
+description = "Build and publish a GitHub release with the Linux and Windows binaries"
+depends = ["dist"]
+usage = 'arg "<version>" help="Release tag, such as v1.2.3"'
+run = """
+# The local tag must exist; create it yourself before releasing.
+if ! git rev-parse -q --verify "refs/tags/$usage_version" >/dev/null; then
+  echo "error: local tag $usage_version does not exist" >&2
+  exit 1
+fi
+gh release create "$usage_version" \
+  --title "$usage_version" \
+  --target "$(git rev-list -n 1 "$usage_version")" \
+  --generate-notes \
+  dist/noticeboard-linux-amd64 \
+  dist/noticeboard-windows-amd64.exe \
+  dist/checksums-sha256.txt
+"""
+
 [tasks.test]
 description = "Run all tests"
 run = "go test ./..."

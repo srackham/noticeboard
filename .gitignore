@@ -1,6 +1,7 @@
 .nfs*
 untracked/
 pi-session-*
+dist/
 sessions/
 noticeboard
 noticeboard.db

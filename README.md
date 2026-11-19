@@ -132,6 +132,7 @@ For another platform, set `GOOS` and `GOARCH`, for example `GOOS=windows GOARCH=
 - `mise run fmt` formats the Go source.
 - `mise run tidy` verifies and tidies the Go modules.
 - `mise run clean` tidies the modules and removes the built executable.
+- `mise run release -- <version>` builds the Linux and Windows binaries and publishes a GitHub release for the existing local tag `<version>` (requires the `gh` CLI).
 
 ## Security
 

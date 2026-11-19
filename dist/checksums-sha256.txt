@@ -1,2 +1,0 @@
-c84335a13bcc644d1b5b0ea4ce2a94a704d7895410f355487b9477ad486edcd8  noticeboard-linux-amd64
-18bb59bbc3f17186d9c8ef3ccb4becff3df196812f749085b74833b3d8e20b7f  noticeboard-windows-amd64.exe

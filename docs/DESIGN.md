@@ -402,14 +402,15 @@ The board is configured entirely from the admin dashboard. There are no environm
 
 Tools are managed by [mise](https://mise.jdx.dev/) (`mise.toml`).
 
-| Task      | Purpose                                                                                              |
-| --------- | ---------------------------------------------------------------------------------------------------- |
-| `run`     | Development server with reload on `.go` and `templates/` changes (wgo)                               |
-| `run-gui` | As `run`, launching the GUI window. Each reload opens a new window; this is accepted for development |
-| `build`   | `CGO_ENABLED=0 go build -o noticeboard .`                                                            |
-| `test`    | `go test ./...`                                                                                      |
-| `fmt`     | `go fmt ./...`                                                                                       |
-| `tidy`    | `go mod verify && go mod tidy`                                                                       |
+| Task      | Purpose                                                                                                                       |
+| --------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `run`     | Development server with reload on `.go` and `templates/` changes (wgo)                                                        |
+| `run-gui` | As `run`, launching the GUI window. Each reload opens a new window; this is accepted for development                          |
+| `build`   | `CGO_ENABLED=0 go build -o noticeboard .`                                                                                     |
+| `test`    | `go test ./...`                                                                                                               |
+| `fmt`     | `go fmt ./...`                                                                                                                |
+| `tidy`    | `go mod verify && go mod tidy`                                                                                                |
+| `release` | Build the Linux and Windows binaries (`dist`) and publish a GitHub release for an existing local tag with `gh release create` |
 
 The Go version is pinned in the `[tools]` section of `mise.toml`.
 
