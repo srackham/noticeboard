@@ -161,10 +161,22 @@ body.admin {
 }
 
 .login-form button,
+.login-form .button,
 .admin-bar button {
   font: inherit;
   padding: 0.4rem 0.9rem;
   cursor: pointer;
+}
+
+/* The Cancel link looks like the Log in button. */
+.login-form .button {
+  text-align: center;
+  text-decoration: none;
+  color: #000;
+  background: #efefef;
+  border: 1px solid #767676;
+  border-radius: 2px;
+  box-sizing: border-box;
 }
 
 .error {

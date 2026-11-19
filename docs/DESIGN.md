@@ -210,7 +210,7 @@ The mock-up is a single moment, not a specification. Zones are IANA IDs, so dayl
 
 ### 4.2 Login and session
 
-1. `GET /admin/login` renders the form (username and password). Like all admin forms, it is an HTMX form (see CSRF below).
+1. `GET /admin/login` renders the form (username and password) with a Cancel link beneath Log in that opens the board page `/`. Like all admin forms, it is an HTMX form (see CSRF below).
 2. `POST /admin/login` normalises the username (section 4.1), looks up the admin and checks the password with `bcrypt.CompareHashAndPassword`. If the username does not match, the server still runs the comparison against a dummy bcrypt hash, so the response time does not reveal which usernames exist. A failure returns HTTP 422 with the message "Username or password is incorrect.", for both a wrong username and a wrong password. A username that contains white space cannot match, so it gets the same message.
 3. On success the server generates 32 random bytes (`crypto/rand`) and sends them base64url-encoded in a cookie named `noticeboard_session`. It stores the hex SHA-256 of the token in `sessions` with an expiry 12 hours ahead. The cookie has `HttpOnly`, `SameSite=Strict` and `Path=/admin`, and `Secure` when the request arrived over TLS (`r.TLS != nil`). The response carries `HX-Redirect: /admin`. Several sessions may be active at once.
 4. `POST /admin/logout` deletes the session row, expires the cookie (`MaxAge=-1`) and responds with `HX-Redirect: /admin/login`.
