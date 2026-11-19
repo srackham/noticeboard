@@ -204,7 +204,7 @@ func TestAdminMenuOrder(t *testing.T) {
 	h, sqlDB := newTestServer(t)
 	c := adminSession(t, h, sqlDB)
 
-	want := []string{"Administration", "Timezones table", "World Clocks", "Log out"}
+	want := []string{"Home", "Administration", "Timezones table", "Log out"}
 	for _, page := range []string{"/admin", timezonesPath} {
 		body := tableFullPage(t, h, c, page)
 		got := menuLinks(t, body)
