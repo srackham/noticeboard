@@ -22,6 +22,7 @@ type settingsFormView struct {
 	ColourLabel      string
 	ColourClock      string
 	ColourUTC        string
+	TablePageSize    string
 	Errors           settings.Errors // field messages, keyed by form field name
 	Notice           string          // a confirmation, such as "Saved."
 }
@@ -35,6 +36,7 @@ func newSettingsView(in settings.Input, errs settings.Errors, notice string) set
 		ColourLabel:      in.ColourLabel,
 		ColourClock:      in.ColourClock,
 		ColourUTC:        in.ColourUTC,
+		TablePageSize:    in.TablePageSize,
 		Errors:           errs,
 		Notice:           notice,
 	}
@@ -49,6 +51,7 @@ func inputFrom(st settings.Settings) settings.Input {
 		ColourLabel:      st.ColourLabel,
 		ColourClock:      st.ColourClock,
 		ColourUTC:        st.ColourUTC,
+		TablePageSize:    strconv.Itoa(st.TablePageSize),
 	}
 }
 
@@ -83,6 +86,7 @@ func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
 		ColourLabel:      r.PostForm.Get("colour_label"),
 		ColourClock:      r.PostForm.Get("colour_clock"),
 		ColourUTC:        r.PostForm.Get("colour_utc"),
+		TablePageSize:    r.PostForm.Get("table_page_size"),
 	}
 
 	clean, errs := settings.ParseInput(in)

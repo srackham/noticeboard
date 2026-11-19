@@ -314,3 +314,88 @@ func TestDelete(t *testing.T) {
 		t.Errorf("second Delete: error = %v, want ErrNotFound", err)
 	}
 }
+
+func TestNextSort(t *testing.T) {
+	ctx := context.Background()
+	sqlDB := openTestDB(t)
+	next, err := NextSort(ctx, sqlDB)
+	if err != nil {
+		t.Fatalf("NextSort: %v", err)
+	}
+	if next != 10 {
+		t.Errorf("NextSort = %d, want 10", next)
+	}
+}
+
+func TestCreateWithExplicitValues(t *testing.T) {
+	ctx := context.Background()
+	sqlDB := openTestDB(t)
+
+	z, err := CreateWith(ctx, sqlDB, Values{Label: "Honolulu", Zone: "Pacific/Honolulu", Enabled: false, Sort: 42})
+	if err != nil {
+		t.Fatalf("CreateWith: %v", err)
+	}
+	if z.Enabled || z.Sort != 42 {
+		t.Errorf("created = %+v, want disabled with sort 42", z)
+	}
+
+	// A sort value in use by another clock is refused.
+	_, err = CreateWith(ctx, sqlDB, Values{Label: "Suva", Zone: "Pacific/Fiji", Enabled: false, Sort: 1})
+	if fields := errorFields(t, err); len(fields) != 1 || fields[0] != FieldSort {
+		t.Errorf("clashing sort fields = %v, want [sort]", fields)
+	}
+
+	// An enabled clock is refused when nine are already enabled.
+	_, err = CreateWith(ctx, sqlDB, Values{Label: "Suva", Zone: "Pacific/Fiji", Enabled: true, Sort: 43})
+	if !errors.Is(err, ErrBoardFull) {
+		t.Errorf("tenth enabled clock = %v, want ErrBoardFull", err)
+	}
+
+	// A disabled clock may be added even when the board is full.
+	if _, err := CreateWith(ctx, sqlDB, Values{Label: "Suva", Zone: "Pacific/Fiji", Enabled: false, Sort: 43}); err != nil {
+		t.Errorf("disabled clock with a full board: %v", err)
+	}
+}
+
+func TestUpdateWithExplicitValues(t *testing.T) {
+	ctx := context.Background()
+	sqlDB := openTestDB(t)
+	id := idOf(t, sqlDB, "Asia/Kolkata")
+
+	// Free a place, then change every value.
+	if err := Toggle(ctx, sqlDB, idOf(t, sqlDB, "Europe/Moscow")); err != nil {
+		t.Fatalf("disable Moscow: %v", err)
+	}
+	z, err := UpdateWith(ctx, sqlDB, id, Values{Label: "Delhi", Zone: "Asia/Kolkata", Enabled: true, Sort: 77})
+	if err != nil {
+		t.Fatalf("UpdateWith: %v", err)
+	}
+	if z.Label != "Delhi" || z.Sort != 77 || !z.Enabled {
+		t.Errorf("updated = %+v, want Delhi, sort 77, enabled", z)
+	}
+
+	// A sort value in use is refused.
+	_, err = UpdateWith(ctx, sqlDB, id, Values{Label: "Delhi", Zone: "Asia/Kolkata", Enabled: true, Sort: 2})
+	if fields := errorFields(t, err); len(fields) != 1 || fields[0] != FieldSort {
+		t.Errorf("clashing sort fields = %v, want [sort]", fields)
+	}
+
+	// Enabling a tenth clock is refused. Disable UTC and add an enabled clock,
+	// then try to enable UTC.
+	utc := idOf(t, sqlDB, "UTC")
+	if _, err := UpdateWith(ctx, sqlDB, utc, Values{Label: "UTC", Zone: "UTC", Enabled: false, Sort: 1}); err != nil {
+		t.Fatalf("disable UTC: %v", err)
+	}
+	for _, c := range []Values{
+		{Label: "Honolulu", Zone: "Pacific/Honolulu", Enabled: true, Sort: 42},
+		{Label: "Suva", Zone: "Pacific/Fiji", Enabled: true, Sort: 43},
+	} {
+		if _, err := CreateWith(ctx, sqlDB, c); err != nil {
+			t.Fatalf("create enabled clock %s: %v", c.Label, err)
+		}
+	}
+	_, err = UpdateWith(ctx, sqlDB, utc, Values{Label: "UTC", Zone: "UTC", Enabled: true, Sort: 1})
+	if !errors.Is(err, ErrBoardFull) {
+		t.Errorf("enabling a tenth clock = %v, want ErrBoardFull", err)
+	}
+}

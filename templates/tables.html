@@ -1,0 +1,123 @@
+{{define "table-page"}}<!DOCTYPE html>
+<html lang="en" class="admin">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{.Title}} · Noticeboard</title>
+  <link rel="stylesheet" href="/static/css/app.css">
+  <script src="/static/js/htmx.min.js" defer></script>
+  <script src="/static/js/app.js" defer></script>
+</head>
+<body class="admin">
+  <main class="admin-main wide">
+    <header class="admin-bar">
+      <h1>{{.Title}}</h1>
+      <nav class="admin-nav">
+        <a href="/admin" data-testid="dashboard-link">Dashboard</a>
+        <form hx-post="/admin/logout">
+          <button type="submit" data-testid="logout">Log out</button>
+        </form>
+      </nav>
+    </header>
+
+    <section class="panel" data-testid="table-panel">
+      <div class="panel-head">
+        <h2>{{.Title}}</h2>
+        <div class="panel-actions">
+          <form id="table-search" class="table-search" data-testid="table-search"
+                hx-get="/admin/tables/{{.Slug}}" hx-target="#table-grid" hx-swap="outerHTML" hx-push-url="true">
+            <input id="table-search-input" name="q" type="search" value="{{.Grid.Search}}"
+                   placeholder="Search" aria-label="Search records">
+            <button type="button" class="clear-search" data-clear-search aria-label="Clear search" title="Clear search">×</button>
+            <button type="submit" data-testid="search-button">Search</button>
+          </form>
+          <button type="button" hx-get="/admin/tables/{{.Slug}}/new" hx-target="#table-form" hx-swap="innerHTML"
+                  data-testid="add-record">Add record</button>
+        </div>
+      </div>
+      {{template "table-grid" .Grid}}
+      <div id="table-form" data-testid="table-form"></div>
+    </section>
+  </main>
+</body>
+</html>
+{{end}}
+
+{{define "table-grid"}}
+<div id="table-grid" data-testid="table-grid" data-table="{{.Slug}}">{{template "table-grid-body" .}}</div>
+{{end}}
+
+{{define "table-grid-body"}}
+{{- if .Total}}
+<p class="count" data-testid="table-count">Showing {{.First}}–{{.Last}} of {{.Total}} records.</p>
+<table class="zones" data-testid="table-table">
+  <thead>
+    <tr>{{range .Columns}}<th>{{.}}</th>{{end}}<th>Actions</th></tr>
+  </thead>
+  <tbody>
+    {{- range .Rows}}
+    <tr data-testid="table-row" data-record-id="{{.ID}}">
+      {{- range .Cells}}<td>{{.}}</td>{{end}}
+      <td class="actions">
+        <button type="button" hx-get="{{.EditURL}}" hx-target="#table-form" hx-swap="innerHTML">Edit</button>
+        <button type="button" hx-delete="{{.DeleteURL}}" hx-confirm="{{.Confirm}}" hx-swap="none">Delete</button>
+      </td>
+    </tr>
+    {{- end}}
+  </tbody>
+</table>
+<nav class="pager" data-testid="pager">
+  <button type="button" hx-get="{{.PrevURL}}" hx-target="#table-grid" hx-swap="outerHTML" hx-push-url="true"
+          {{- if not .Previous}} disabled{{end}}>Previous</button>
+  <span data-testid="page-number">Page {{.Number}} of {{.Pages}}</span>
+  <button type="button" hx-get="{{.NextURL}}" hx-target="#table-grid" hx-swap="outerHTML" hx-push-url="true"
+          {{- if not .Next}} disabled{{end}}>Next</button>
+</nav>
+{{- else}}
+<p class="empty-list" data-testid="table-empty">{{if .Search}}No records found.{{else}}No records yet.{{end}}</p>
+{{- end}}
+{{end}}
+
+{{define "table-form"}}
+<form id="table-form" class="zone-form" data-testid="table-form"
+      hx-post="{{.Action}}" hx-target="#table-form" hx-swap="innerHTML">
+  <h3>{{.Heading}}</h3>
+  {{with .Error}}<p class="error" role="alert" data-testid="table-form-error">{{.}}</p>{{end}}
+  {{- range .Fields}}
+  <label for="field-{{.Name}}">{{.Label}}</label>
+  {{- if .Groups}}
+  <select id="field-{{.Name}}" name="{{.Name}}" required>
+    <option value=""{{if eq .Value ""}} selected{{end}}>Choose…</option>
+    {{- range .Groups}}
+    <optgroup label="{{.Name}}">
+      {{- range .Options}}
+      <option value="{{.Value}}"{{if .Selected}} selected{{end}}>{{.Value}}</option>
+      {{- end}}
+    </optgroup>
+    {{- end}}
+  </select>
+  {{- else}}
+  <input id="field-{{.Name}}" name="{{.Name}}" type="text"{{with .MaxLength}} maxlength="{{.}}"{{end}} value="{{.Value}}" required>
+  {{- end}}
+  {{if .Error}}<p class="field-error" data-testid="error-{{.Name}}">{{.Error}}</p>{{end}}
+  {{- end}}
+  <div class="form-actions">
+    <button type="submit">Save</button>
+    <button type="button" data-clear-form="table-form">Cancel</button>
+  </div>
+</form>
+{{end}}
+
+{{define "table-grid-element"}}
+<div id="table-grid" hx-swap-oob="true" data-testid="table-grid" data-table="{{.Slug}}">{{template "table-grid-body" .}}</div>
+{{end}}
+
+{{define "table-grid-oob"}}
+{{template "table-grid-element" .}}
+<div id="table-form" hx-swap-oob="true"></div>
+{{end}}
+
+{{define "table-missing-oob"}}
+{{template "table-grid-element" .GridView}}
+<div id="table-form" hx-swap-oob="true"><p class="error" role="alert" data-testid="table-message">That record no longer exists.</p></div>
+{{end}}

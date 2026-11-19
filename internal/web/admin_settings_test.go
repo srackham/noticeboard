@@ -17,6 +17,7 @@ func validSettingsForm() url.Values {
 		"colour_label":      {"#4169e1"},
 		"colour_clock":      {"#228b22"},
 		"colour_utc":        {"#b22222"},
+		"table_page_size":   {"20"},
 	}
 }
 
@@ -39,6 +40,9 @@ func TestDashboardShowsSettingsForm(t *testing.T) {
 		`name="colour_label" type="color" value="#4169e1"`,
 		`name="colour_clock" type="color" value="#228b22"`,
 		`name="colour_utc" type="color" value="#b22222"`,
+		`name="table_page_size" type="number" min="5" max="100" step="1" value="20"`,
+		`<legend>Admin tables</legend>`,
+		`data-testid="tables-link"`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Errorf("dashboard missing %q", want)
@@ -90,6 +94,9 @@ func TestSaveSettingsRejectsInvalidInput(t *testing.T) {
 		{name: "background short form", field: "colour_background", value: "#abc", wantError: "Background colour must be"},
 		{name: "utc not a colour", field: "colour_utc", value: "red", wantError: "UTC colour must be"},
 		{name: "title too long", field: "title", value: strings.Repeat("x", 81), wantError: "Title must be 80 characters or fewer."},
+		{name: "page size too small", field: "table_page_size", value: "4", wantError: "Rows per page must be"},
+		{name: "page size too large", field: "table_page_size", value: "101", wantError: "Rows per page must be"},
+		{name: "page size not a number", field: "table_page_size", value: "many", wantError: "Rows per page must be"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

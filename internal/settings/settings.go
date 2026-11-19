@@ -13,14 +13,16 @@ import (
 	"unicode/utf8"
 )
 
-// Limits for the title and refresh interval.
+// Limits for the title, refresh interval and table page size.
 const (
-	MaxTitleLength = 80
-	MinRefresh     = 1
-	MaxRefresh     = 60
+	MaxTitleLength   = 80
+	MinRefresh       = 1
+	MaxRefresh       = 60
+	MinTablePageSize = 5
+	MaxTablePageSize = 100
 )
 
-// Settings is the board configuration. Colours are "#rrggbb".
+// Settings is the board and administration configuration. Colours are "#rrggbb".
 type Settings struct {
 	Title            string
 	RefreshSeconds   int
@@ -28,6 +30,7 @@ type Settings struct {
 	ColourLabel      string
 	ColourClock      string
 	ColourUTC        string
+	TablePageSize    int // rows per page in the administration table pages
 }
 
 // Field names used as keys in Errors. They match the form field names.
@@ -38,6 +41,7 @@ const (
 	FieldColourLabel      = "colour_label"
 	FieldColourClock      = "colour_clock"
 	FieldColourUTC        = "colour_utc"
+	FieldTablePageSize    = "table_page_size"
 )
 
 // Errors maps a field name to a message for the user. It is returned as an
@@ -82,6 +86,10 @@ func Validate(s Settings) (Settings, Errors) {
 		fail(FieldRefreshSeconds, refreshMessage())
 	}
 
+	if s.TablePageSize < MinTablePageSize || s.TablePageSize > MaxTablePageSize {
+		fail(FieldTablePageSize, tablePageSizeMessage())
+	}
+
 	colours := []struct {
 		field string
 		label string
@@ -108,9 +116,11 @@ func Validate(s Settings) (Settings, Errors) {
 func Get(ctx context.Context, db *sql.DB) (Settings, error) {
 	var s Settings
 	err := db.QueryRowContext(ctx, `
-		SELECT title, refresh_seconds, colour_background, colour_label, colour_clock, colour_utc
+		SELECT title, refresh_seconds, colour_background, colour_label, colour_clock, colour_utc,
+		       table_page_size
 		FROM settings WHERE id = 1`).Scan(
 		&s.Title, &s.RefreshSeconds, &s.ColourBackground, &s.ColourLabel, &s.ColourClock, &s.ColourUTC,
+		&s.TablePageSize,
 	)
 	if err != nil {
 		return Settings{}, fmt.Errorf("read settings: %w", err)
@@ -129,10 +139,10 @@ func Update(ctx context.Context, db *sql.DB, s Settings) (Settings, error) {
 	_, err := db.ExecContext(ctx, `
 		UPDATE settings SET
 			title = ?, refresh_seconds = ?, colour_background = ?,
-			colour_label = ?, colour_clock = ?, colour_utc = ?
+			colour_label = ?, colour_clock = ?, colour_utc = ?, table_page_size = ?
 		WHERE id = 1`,
 		clean.Title, clean.RefreshSeconds, clean.ColourBackground,
-		clean.ColourLabel, clean.ColourClock, clean.ColourUTC,
+		clean.ColourLabel, clean.ColourClock, clean.ColourUTC, clean.TablePageSize,
 	)
 	if err != nil {
 		return s, fmt.Errorf("update settings: %w", err)
@@ -149,11 +159,12 @@ type Input struct {
 	ColourLabel      string
 	ColourClock      string
 	ColourUTC        string
+	TablePageSize    string
 }
 
 // ParseInput parses and validates a form submission. It returns the normalised
-// Settings and, when any field is wrong, Errors. A refresh value that is not
-// a whole number is reported as a refresh error.
+// Settings and, when any field is wrong, Errors. A refresh value or page size
+// that is not a whole number is reported as an error for that field.
 func ParseInput(in Input) (Settings, Errors) {
 	s := Settings{
 		Title:            in.Title,
@@ -167,6 +178,13 @@ func ParseInput(in Input) (Settings, Errors) {
 		s.RefreshSeconds = n
 	} else {
 		errs = Errors{FieldRefreshSeconds: refreshMessage()}
+	}
+	if n, err := strconv.Atoi(strings.TrimSpace(in.TablePageSize)); err == nil {
+		s.TablePageSize = n
+	} else if errs == nil {
+		errs = Errors{FieldTablePageSize: tablePageSizeMessage()}
+	} else {
+		errs[FieldTablePageSize] = tablePageSizeMessage()
 	}
 
 	clean, verrs := Validate(s)
@@ -184,4 +202,9 @@ func ParseInput(in Input) (Settings, Errors) {
 // refreshMessage is the message for an invalid refresh interval.
 func refreshMessage() string {
 	return fmt.Sprintf("Refresh must be a whole number of seconds from %d to %d.", MinRefresh, MaxRefresh)
+}
+
+// tablePageSizeMessage is the message for an invalid table page size.
+func tablePageSizeMessage() string {
+	return fmt.Sprintf("Rows per page must be a whole number from %d to %d.", MinTablePageSize, MaxTablePageSize)
 }

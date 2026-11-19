@@ -21,10 +21,17 @@
     }
   }
 
-  // Validation failures come back as 422 with the re-rendered form. HTMX does
-  // not swap 4xx responses by default, so enable the swap for them.
+  // Validation failures (422) and stale records (404) come back as HTML
+  // fragments. HTMX does not swap 4xx responses by default, so enable the swap
+  // for them. Plain-text 404s, such as http.NotFound, are still not swapped.
   document.body.addEventListener("htmx:beforeSwap", function (evt) {
-    if (evt.detail.xhr && evt.detail.xhr.status === 422) {
+    var xhr = evt.detail.xhr;
+    if (!xhr) {
+      return;
+    }
+    var status = xhr.status;
+    var type = xhr.getResponseHeader("Content-Type") || "";
+    if ((status === 422 || status === 404) && type.indexOf("text/html") === 0) {
       evt.detail.shouldSwap = true;
       evt.detail.isError = false;
     }
@@ -49,11 +56,35 @@
     }
   });
 
-  // The Cancel button in a clock form empties the form region.
+  // The X beside a table search box clears it and reloads the table without
+  // the filter. Submitting the enclosing HTMX form re-renders the grid.
   document.body.addEventListener("click", function (evt) {
     var target = evt.target;
-    if (target && target.closest && target.closest("[data-clear-form]")) {
-      var region = document.getElementById("clock-form");
+    var clear = target && target.closest && target.closest("[data-clear-search]");
+    if (!clear) {
+      return;
+    }
+    var form = clear.closest("form");
+    if (!form) {
+      return;
+    }
+    var input = form.querySelector('input[name="q"]');
+    if (input) {
+      input.value = "";
+    }
+    if (form.requestSubmit) {
+      form.requestSubmit();
+    }
+  });
+
+  // The Cancel button in a form empties its region. data-clear-form names the
+  // region ID; without a value it means the dashboard's clock form.
+  document.body.addEventListener("click", function (evt) {
+    var target = evt.target;
+    var trigger = target && target.closest && target.closest("[data-clear-form]");
+    if (trigger) {
+      var id = trigger.getAttribute("data-clear-form") || "clock-form";
+      var region = document.getElementById(id);
       if (region) {
         region.innerHTML = "";
       }

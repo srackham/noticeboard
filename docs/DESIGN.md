@@ -22,7 +22,8 @@ Reference mock-up: [`docs/time-display.png`](time-display.png)
 - The UTC clock is shown in red; all other clocks are shown in green.
 - An administration dashboard, protected by login, for managing:
   - the clocks (add, edit, enable/disable, reorder, delete);
-  - the board settings (title, colours, refresh interval).
+  - the board settings (title, colours, refresh interval) and the table page size;
+  - the `timezones` table through a paginated explorer with its raw columns, Edit and Delete per row, built on a generic table layer (section 5.3).
 - Run as a web server, or as a desktop-style app window with `serve --launch`; `open <address>` opens an already-running board without starting a server.
 
 **Out of scope (for now)**
@@ -58,16 +59,24 @@ noticeboard/
 │   ├── clock/              # pure time logic: format time, colour class (no I/O)
 │   ├── zones/              # timezones table: repository and validation
 │   ├── settings/           # settings singleton: read, validate, update
+│   ├── paging/             # page arithmetic: Clamp, LastPage (no I/O)
+│   ├── admintable/         # generic table pages: contract, registry, adapters
+│   │   ├── table.go        # Table interface and its types
+│   │   ├── errors.go       # ErrNotFound, ErrUnknownAction, ErrBadDirection, FieldErrors, Refused
+│   │   ├── region.go       # zone drop-down grouped by region
+│   │   ├── registry.go     # All(db): the registered tables
+│   │   └── timezones.go    # the timezones adapter over internal/zones
 │   ├── auth/               # admin account, password hashing, sessions
 │   ├── auditlog/           # text audit log, capped at 1000 lines
 │   └── web/                # HTTP handlers and rendering
 │       ├── board.go        # GET /, GET /board
 │       ├── admin_auth.go   # login, logout, session middleware
-│       ├── admin_zones.go  # zone CRUD, toggle, move
+│       ├── admin_zones.go  # zone CRUD, toggle, move (dashboard clock list)
+│       ├── admin_table.go  # generic table pages: /admin/tables/{table}
 │       ├── admin_settings.go
 │       └── middleware.go   # security headers, body size limit, audit logging
 ├── migrations/             # 0001_init.sql (schema and seed); migrations.go embeds them
-├── templates/              # html/template files (embedded)
+├── templates/              # html/template files (embedded), including tables.html
 ├── static/
 │   ├── fonts/              # DSEG7Classic-Bold.woff2, DSEG-LICENSE.txt
 │   ├── css/app.css
@@ -125,7 +134,9 @@ A singleton: exactly one row, enforced by `CHECK (id = 1)` and created by the in
 | `colour_label`      | TEXT    | `#4169e1`      | `#rrggbb`; label bar background, and the title text colour |
 | `colour_clock`      | TEXT    | `#228b22`      | `#rrggbb` (non-UTC clocks)                                 |
 | `colour_utc`        | TEXT    | `#b22222`      | `#rrggbb` (UTC clock)                                      |
+| `table_page_size`   | INTEGER | `20`           | 5–100 (`CHECK`); rows per page in the administration tables |
 
+- `table_page_size` applies to every administration table page (section 5.3). It is edited on the dashboard, in the settings form's "Admin tables" fieldset.
 - Colours are accepted in either case and stored in lowercase.
 - Label text is fixed white. It is not a setting.
 - The colour defaults are approximations taken by eye from the mock-up and must be checked on the real display.
@@ -266,6 +277,27 @@ The application runs on a VPN, so the design relies on the network for protectio
 
 The dashboard is a full page. Its regions are `#zones` (clock list), the form region, and `#settings`.
 
+### 5.3 Administration table pages
+
+The table pages are generic. `{table}` is a registered slug (`admintable.All`), and `timezones` is the one registered now. An unknown slug gives 404. The slug is never used to build SQL.
+
+| Method | Path                                               | Purpose                                                    |
+| ------ | -------------------------------------------------- | ---------------------------------------------------------- |
+| GET    | `/admin/tables/{table}`                            | Page: full page, or grid fragment with `HX-Request`        |
+| GET    | `/admin/tables/{table}/new`                        | New-record form                                            |
+| POST   | `/admin/tables/{table}`                            | Create (shows the last page)                               |
+| GET    | `/admin/tables/{table}/{id}/edit?page=N`           | Edit form                                                  |
+| POST   | `/admin/tables/{table}/{id}?page=N`                | Update every editable field                                |
+| DELETE | `/admin/tables/{table}/{id}?page=N`                | Delete (after `hx-confirm`)                                |
+
+- **Grid:** the table's own columns, in schema order, with raw values, and an Actions column holding Edit and Delete only. For `timezones` that is `id`, `label`, `zone`, `enabled` (`1`/`0`), `sort`. The adapter's `List` decides the order; `timezones` uses `sort` ascending.
+- **Search:** a search box, an X clear button and a Search button sit to the left of Add record. `q` keeps only the records with a value containing the text in any column (`LIKE`, so without case for ASCII; `%` and `_` are literal). The total, pages and clamping use the filtered set, and `q` is kept in the pager and Edit/Delete URLs. The X button clears the box and reloads the grid unfiltered. No match shows "No records found.".
+- **Form:** every column except the ID, so `enabled` and `sort` are edited here as well as `label` and `zone`. A new record is prefilled from the adapter's defaults; for `timezones` that is `enabled = 1` and `sort = max + 1`. `sort` must be unique, and enabling a tenth clock is refused, both with 422 messages.
+- **Paging:** `page` is 1-based; missing means page 1; anything else that is not a positive whole number gives 400; a page past the end shows the last page. The count and rows are read in one transaction, and the clamping rule is `internal/paging.Clamp`. `List(ctx, pg, search)` applies the search before counting.
+- **Regions:** `#table-grid` and `#table-form`. Responses are out-of-band swaps of the grid and the form, as for the clock list.
+- **Errors:** a refusal gives 422 with the message in the form region, and a stale `{id}` gives 404 with the refreshed grid and "That record no longer exists.".
+- **Adding a table:** an adapter in `internal/admintable` plus one line in `All`. No handler, route or template changes.
+
 ## 6. Board display
 
 ### 6.1 Live updates
@@ -313,7 +345,7 @@ Each poll replaces the entire wrapper. A change to the title, colours or refresh
 - If a poll fails (an HTTP error status, or a network failure), HTMX keeps the last good board on screen.
 - `app.js` then shows a small "STALE" indicator in a fixed corner. The indicator sits outside `#board`, so the polling replacement does not remove it.
 - The indicator is hidden again after the next successful swap of `#board`.
-- `app.js` also sets `shouldSwap = true` for `htmx:beforeSwap` responses with status 422, the HTMX 2 pattern for validation fragments.
+- `app.js` also sets `shouldSwap = true` for `htmx:beforeSwap` responses with status 422 or 404 whose `Content-Type` is `text/html`. That is the HTMX 2 pattern for validation fragments and for the table pages' stale-record fragment. Plain-text 404s, such as `http.NotFound`, are not swapped.
 
 ## 7. Font
 
@@ -388,14 +420,17 @@ Per the project guidelines:
 
 - **Unit tests** use Go's built-in `testing` package with table-driven tests.
   - `internal/clock`: time formatting, and colour-class selection (exact zone `UTC` only), using an injected `now`.
-  - `internal/settings`: validation rules (title trimming and length, colour format, refresh range).
-  - `internal/zones`: label and zone trimming, uniqueness, rejection of `""` and `Local`, the nine-enabled limit, and move at the ends of the list.
+  - `internal/settings`: validation rules (title trimming and length, colour format, refresh range, table page size).
+  - `internal/zones`: label and zone trimming, uniqueness, rejection of `""` and `Local`, the nine-enabled limit, and move at the ends of the list; `ListPage` paging, clamping and totals.
+  - `internal/paging`: `Clamp` at the ends, beyond the last page, the `LastPage` sentinel and an empty table.
+  - `internal/admintable`: region grouping, and the timezones adapter's columns, defaults, raw cells, `Load`, create/update values and error mapping.
   - `internal/db`: migrations apply in order, once, and are idempotent; a newer `user_version` is refused.
   - `internal/auth`: password hashing, username validation and normalisation, and session expiry.
   - `internal/auditlog`: the 1000-line cap removes the oldest lines.
 - **Integration tests** use `httptest` against the routes, with a temporary SQLite file (`t.TempDir()`) and the real migrations applied.
   - Login (including the generic 422), logout, the session middleware, and the HTMX `401` + `HX-Redirect` path.
   - Zone CRUD, toggle, move, the 404 and 400 cases, and 422 validation responses.
+  - Table pages: page parsing, the page size setting, the full page and fragment (`Vary: HX-Request`), the raw columns and Edit/Delete buttons, the prefilled new-record form, create, update, delete, validation and refusal, search (filtering, totals, literal wildcards, filter kept in pager and record URLs, no-match message), stale-record 404s, unknown slug, middleware, auditing, and a test-only second adapter proving the layer is generic.
   - Board rendering with the current settings, including the empty-board message.
 - **testify** is a test-only dependency, used only where it clearly simplifies an assertion.
 - **Functional tests** are not written in this phase. The markup in section 6.4 is designed so they can be added later with Playwright.
@@ -443,6 +478,12 @@ Per the project guidelines:
 | Poll errors                 | Last good board kept; "STALE" indicator outside `#board`, hidden on next successful swap                                                                   |
 | Validation responses        | HTTP 422 with fragment; swap enabled in `app.js`                                                                                                           |
 | Admin responses             | Success returns the clock list (`#zones`) and an out-of-band empty form region                                                                             |
+| Admin table pages           | Generic `/admin/tables/{table}` routes over an `internal/admintable` adapter; unknown slug is 404 (section 5.3)                                              |
+| Table grid                  | The table's own columns with raw values, and Edit and Delete per row                                                                                        |
+| Table form                  | Every column except the ID; `enabled` and `sort` are edited here too; a new record uses the adapter's defaults                                              |
+| Table search                | One `q` box filtering every column (contains, without case for ASCII, `%`/`_` literal), with Search and X controls left of Add record                        |
+| Table page size             | `settings.table_page_size`, 5–100, default 20, set on the dashboard; the count and rows are read in one transaction (section 3.2)                           |
+| Stale table record          | 404 with the refreshed grid and a message; swapped because the response is `text/html`                                                                      |
 | CLI                         | `--help` exits 0; usage errors exit 2; runtime errors exit 1                                                                                               |
 | Desktop mode                | Browser app-mode via `serve --launch` or `open <address>`; no webview library; `serve` runs until Ctrl-C/SIGTERM                                           |
 | Font                        | DSEG7 Classic Bold, self-hosted WOFF2, OFL                                                                                                                 |

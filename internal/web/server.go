@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"time"
 
+	"noticeboard/internal/admintable"
 	"noticeboard/internal/auditlog"
 )
 
@@ -19,8 +20,9 @@ type Server struct {
 	db        *sql.DB
 	templates *template.Template
 	static    fs.FS
-	audit     *auditlog.Logger // nil disables audit logging
-	now       func() time.Time // injected by tests
+	audit     *auditlog.Logger   // nil disables audit logging
+	tables    []admintable.Table // the registered table pages; tests may replace them
+	now       func() time.Time   // injected by tests
 }
 
 // New parses the templates in assets/templates and prepares the static files
@@ -35,7 +37,14 @@ func New(db *sql.DB, assets fs.FS, audit *auditlog.Logger) (*Server, error) {
 	if err != nil {
 		return nil, fmt.Errorf("static files: %w", err)
 	}
-	return &Server{db: db, templates: templates, static: static, audit: audit, now: time.Now}, nil
+	return &Server{
+		db:        db,
+		templates: templates,
+		static:    static,
+		audit:     audit,
+		tables:    admintable.All(db),
+		now:       time.Now,
+	}, nil
 }
 
 // Handler returns the routes, wrapped in the middleware that applies to all of them.
@@ -65,6 +74,16 @@ func (s *Server) Handler() http.Handler {
 
 	// Board settings.
 	mux.Handle("POST /admin/settings", s.requireSession(requireHTMX(http.HandlerFunc(s.handleSettings))))
+
+	// Table pages. They are generic: {table} is a registered slug, and an
+	// unknown one gives 404. Every change needs a session and HX-Request.
+	// The grid shows the table's columns; the form edits all but the ID.
+	mux.Handle("GET /admin/tables/{table}", s.requireSession(http.HandlerFunc(s.handleTablePage)))
+	mux.Handle("GET /admin/tables/{table}/new", s.requireSession(http.HandlerFunc(s.handleTableNew)))
+	mux.Handle("POST /admin/tables/{table}", s.requireSession(requireHTMX(http.HandlerFunc(s.handleTableCreate))))
+	mux.Handle("GET /admin/tables/{table}/{id}/edit", s.requireSession(http.HandlerFunc(s.handleTableEdit)))
+	mux.Handle("POST /admin/tables/{table}/{id}", s.requireSession(requireHTMX(http.HandlerFunc(s.handleTableUpdate))))
+	mux.Handle("DELETE /admin/tables/{table}/{id}", s.requireSession(requireHTMX(http.HandlerFunc(s.handleTableDelete))))
 
 	mux.Handle("/admin/", s.requireSession(http.NotFoundHandler()))
 

@@ -45,9 +45,12 @@
   <main class="admin-main wide">
     <header class="admin-bar">
       <h1>Administration</h1>
-      <form hx-post="/admin/logout">
-        <button type="submit" data-testid="logout">Log out</button>
-      </form>
+      <nav class="admin-nav">
+        <a href="/admin/tables/timezones" data-testid="tables-link">Timezones table</a>
+        <form hx-post="/admin/logout">
+          <button type="submit" data-testid="logout">Log out</button>
+        </form>
+      </nav>
     </header>
 
     <section class="panel" data-testid="clocks-panel">
@@ -61,7 +64,7 @@
     </section>
 
     <section id="settings" class="panel" data-testid="settings-panel">
-      <h2>Board settings</h2>
+      <h2>Settings</h2>
       {{template "settings-form" .Settings}}
     </section>
   </main>
@@ -164,6 +167,16 @@
       <label for="colour_utc">UTC clock</label>
       <input id="colour_utc" name="colour_utc" type="color" value="{{.ColourUTC}}">
       {{with index .Errors "colour_utc"}}<p class="field-error" data-testid="error-colour_utc">{{.}}</p>{{end}}
+    </div>
+  </fieldset>
+
+  <fieldset class="colours">
+    <legend>Admin tables</legend>
+    <div class="field">
+      <label for="table_page_size">Rows per page</label>
+      <input id="table_page_size" name="table_page_size" type="number" min="5" max="100" step="1" value="{{.TablePageSize}}">
+      <p class="hint">How many records each administration table page shows.</p>
+      {{with index .Errors "table_page_size"}}<p class="field-error" data-testid="error-table_page_size">{{.}}</p>{{end}}
     </div>
   </fieldset>
 

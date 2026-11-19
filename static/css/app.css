@@ -311,3 +311,50 @@ button:disabled {
   font-weight: 700;
   color: #2e7d32;
 }
+
+.admin-nav {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.table-search {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.table-search input[type="search"] {
+  font: inherit;
+  width: 14rem;
+  padding: 0.3rem 0.5rem;
+}
+
+.table-search .clear-search {
+  font-weight: 700;
+  line-height: 1;
+}
+
+.admin-nav a {
+  color: #1a4fa0;
+}
+
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 0.75rem;
+}
+
+.pager button {
+  font: inherit;
+  padding: 0.3rem 0.7rem;
+  cursor: pointer;
+}

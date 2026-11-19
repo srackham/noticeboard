@@ -3,10 +3,9 @@ package web
 import (
 	"errors"
 	"net/http"
-	"sort"
 	"strconv"
-	"strings"
 
+	"noticeboard/internal/admintable"
 	"noticeboard/internal/zones"
 )
 
@@ -40,59 +39,14 @@ type zoneFormView struct {
 	Groups  []zoneGroup  // the time zone drop-down, set by executeZoneForm
 }
 
-// zoneOption is one entry in the time zone drop-down.
-type zoneOption struct {
-	Value    string
-	Selected bool
-}
-
 // zoneGroup is one optgroup of the drop-down: the zones of one region, such as "Europe".
-type zoneGroup struct {
-	Name    string
-	Options []zoneOption
-}
+type zoneGroup = admintable.Group
 
-// zoneGroups groups zone names by their first path segment, so "Europe/London"
-// falls under "Europe". Names with no segment, such as "UTC", go under "Other",
-// which is listed last. current is always included, so a stored zone that the
-// list does not offer is still shown, and it is marked selected.
+// zoneGroups groups zone names by their first path segment for the clock form's
+// drop-down. The grouping rules live in the generic table layer, which the
+// timezones table page shares.
 func zoneGroups(names []string, current string) []zoneGroup {
-	seen := make(map[string]bool, len(names)+1)
-	var all []string
-	for _, n := range names {
-		if !seen[n] {
-			seen[n] = true
-			all = append(all, n)
-		}
-	}
-	if current != "" && !seen[current] {
-		all = append(all, current)
-	}
-	sort.Strings(all)
-
-	byName := map[string][]zoneOption{}
-	for _, n := range all {
-		group := "Other"
-		if i := strings.IndexByte(n, '/'); i >= 0 {
-			group = n[:i]
-		}
-		byName[group] = append(byName[group], zoneOption{Value: n, Selected: n == current})
-	}
-
-	groups := make([]zoneGroup, 0, len(byName))
-	for name, opts := range byName {
-		groups = append(groups, zoneGroup{Name: name, Options: opts})
-	}
-	sort.Slice(groups, func(i, j int) bool {
-		switch {
-		case groups[i].Name == "Other":
-			return false
-		case groups[j].Name == "Other":
-			return true
-		}
-		return groups[i].Name < groups[j].Name
-	})
-	return groups
+	return admintable.GroupOptions(admintable.GroupByRegion(names, current))
 }
 
 // executeZoneForm renders the clock form with its time zone drop-down filled in.

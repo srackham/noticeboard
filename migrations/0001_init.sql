@@ -26,7 +26,9 @@ CREATE TABLE settings (
     colour_clock      TEXT    NOT NULL DEFAULT '#228b22'
                               CHECK (colour_clock GLOB '#[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]'),
     colour_utc        TEXT    NOT NULL DEFAULT '#b22222'
-                              CHECK (colour_utc GLOB '#[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]')
+                              CHECK (colour_utc GLOB '#[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]'),
+    table_page_size   INTEGER NOT NULL DEFAULT 20
+                              CHECK (table_page_size BETWEEN 5 AND 100)
 );
 
 -- The administrator account. The username rule (printable, no white space) is

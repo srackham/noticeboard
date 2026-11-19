@@ -100,3 +100,27 @@ func TestAdminTableHasUsernameNotEmail(t *testing.T) {
 		t.Error("admins still has an email column")
 	}
 }
+
+// TestSettingsRejectBadTablePageSize checks the CHECK constraint on the new
+// column, which holds even when the row is written by an external client.
+func TestSettingsRejectBadTablePageSize(t *testing.T) {
+	sqlDB, err := Open(filepath.Join(t.TempDir(), "test.db"))
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	defer sqlDB.Close()
+
+	var size int
+	if err := sqlDB.QueryRow(`SELECT table_page_size FROM settings WHERE id = 1`).Scan(&size); err != nil {
+		t.Fatalf("read table_page_size: %v", err)
+	}
+	if size != 20 {
+		t.Errorf("default table_page_size = %d, want 20", size)
+	}
+
+	for _, bad := range []int{4, 101} {
+		if _, err := sqlDB.Exec(`UPDATE settings SET table_page_size = ? WHERE id = 1`, bad); err == nil {
+			t.Errorf("table_page_size %d was accepted, want a CHECK failure", bad)
+		}
+	}
+}

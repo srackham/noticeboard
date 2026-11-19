@@ -1,6 +1,7 @@
 package settings
 
 import (
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -14,6 +15,7 @@ func validInput() Input {
 		ColourLabel:      "#010203",
 		ColourClock:      "#000000",
 		ColourUTC:        "#ffffff",
+		TablePageSize:    " 25 ",
 	}
 }
 
@@ -24,6 +26,9 @@ func TestParseInputAcceptsAndNormalises(t *testing.T) {
 	}
 	if s.Title != "Harbour" || s.RefreshSeconds != 12 || s.ColourBackground != "#aabbcc" {
 		t.Errorf("ParseInput = %+v, want trimmed title, parsed refresh and lowercase colour", s)
+	}
+	if s.TablePageSize != 25 {
+		t.Errorf("TablePageSize = %d, want 25", s.TablePageSize)
 	}
 }
 
@@ -43,6 +48,10 @@ func TestParseInputReportsField(t *testing.T) {
 		{name: "label short form", mutate: func(in *Input) { in.ColourLabel = "#abc" }, wantField: FieldColourLabel},
 		{name: "clock missing hash", mutate: func(in *Input) { in.ColourClock = "228b22" }, wantField: FieldColourClock},
 		{name: "utc not hex", mutate: func(in *Input) { in.ColourUTC = "#zz0000" }, wantField: FieldColourUTC},
+		{name: "page size empty", mutate: func(in *Input) { in.TablePageSize = "" }, wantField: FieldTablePageSize},
+		{name: "page size not a number", mutate: func(in *Input) { in.TablePageSize = "many" }, wantField: FieldTablePageSize},
+		{name: "page size too small", mutate: func(in *Input) { in.TablePageSize = strconv.Itoa(MinTablePageSize - 1) }, wantField: FieldTablePageSize},
+		{name: "page size too large", mutate: func(in *Input) { in.TablePageSize = strconv.Itoa(MaxTablePageSize + 1) }, wantField: FieldTablePageSize},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -56,6 +65,17 @@ func TestParseInputReportsField(t *testing.T) {
 				t.Errorf("errors = %v, want only %s", errs, tt.wantField)
 			}
 		})
+	}
+}
+
+// TestParseInputAcceptsPageSizeBounds checks the ends of the accepted range.
+func TestParseInputAcceptsPageSizeBounds(t *testing.T) {
+	for _, in := range []string{strconv.Itoa(MinTablePageSize), strconv.Itoa(MaxTablePageSize), " 20 "} {
+		form := validInput()
+		form.TablePageSize = in
+		if _, errs := ParseInput(form); len(errs) != 0 {
+			t.Errorf("TablePageSize %q: unexpected errors: %v", in, errs)
+		}
 	}
 }
 

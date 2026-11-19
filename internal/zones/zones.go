@@ -25,6 +25,7 @@ const MaxLabelLength = 60
 const (
 	FieldLabel = "label"
 	FieldZone  = "zone"
+	FieldSort  = "sort"
 )
 
 // Errors maps a field name to a message for the user. It is returned as an error when input is invalid.
@@ -200,8 +201,8 @@ func Get(ctx context.Context, db *sql.DB, id int64) (Zone, error) {
 	return get(ctx, db, id)
 }
 
-func query(ctx context.Context, db *sql.DB, q string) ([]Zone, error) {
-	rows, err := db.QueryContext(ctx, q)
+func query(ctx context.Context, q queryer, sqlText string, args ...any) ([]Zone, error) {
+	rows, err := q.QueryContext(ctx, sqlText, args...)
 	if err != nil {
 		return nil, fmt.Errorf("list clocks: %w", err)
 	}
@@ -221,9 +222,56 @@ func query(ctx context.Context, db *sql.DB, q string) ([]Zone, error) {
 	return zs, nil
 }
 
+// Values are a clock's editable column values.
+type Values struct {
+	Label   string
+	Zone    string
+	Enabled bool
+	Sort    int
+}
+
+// NextSort returns the sort value a new clock takes when it is appended: the
+// largest existing sort plus one.
+func NextSort(ctx context.Context, db *sql.DB) (int, error) {
+	var maxSort int
+	if err := db.QueryRowContext(ctx,
+		`SELECT COALESCE(MAX(sort), 0) FROM timezones`).Scan(&maxSort); err != nil {
+		return 0, fmt.Errorf("read sort: %w", err)
+	}
+	return maxSort + 1, nil
+}
+
+// checkSortUnique reports a duplicate sort value held by a clock other than id.
+// Pass 0 for id when creating. It returns nil Errors when the value is free.
+func checkSortUnique(ctx context.Context, q queryer, id int64, sort int) (Errors, error) {
+	var n int
+	if err := q.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM timezones WHERE sort = ? AND id <> ?`, sort, id).Scan(&n); err != nil {
+		return nil, fmt.Errorf("check sort: %w", err)
+	}
+	if n > 0 {
+		return Errors{FieldSort: "That sort value is already used by another clock."}, nil
+	}
+	return nil, nil
+}
+
 // Create adds an enabled clock at the end of the list. It returns Errors for
 // invalid or duplicate input, and ErrBoardFull when nine clocks are already enabled.
 func Create(ctx context.Context, db *sql.DB, label, zone string) (Zone, error) {
+	return create(ctx, db, label, zone, true, nil)
+}
+
+// CreateWith adds a clock with explicit enabled and sort values. It returns
+// Errors for invalid, duplicate or clashing input, and ErrBoardFull when an
+// enabled clock is created while nine are already enabled.
+func CreateWith(ctx context.Context, db *sql.DB, v Values) (Zone, error) {
+	sort := v.Sort
+	return create(ctx, db, v.Label, v.Zone, v.Enabled, &sort)
+}
+
+// create inserts a clock. A nil sort appends it after the last clock; an
+// explicit sort must be unique.
+func create(ctx context.Context, db *sql.DB, label, zone string, enabled bool, sort *int) (Zone, error) {
 	label, zone, errs := validate(label, zone)
 	if len(errs) > 0 {
 		return Zone{}, errs
@@ -238,21 +286,38 @@ func Create(ctx context.Context, db *sql.DB, label, zone string) (Zone, error) {
 		if len(dup) > 0 {
 			return dup
 		}
-		enabled, err := countEnabled(ctx, tx)
-		if err != nil {
-			return err
-		}
-		if enabled >= BoardSize {
-			return ErrBoardFull
+		if enabled {
+			n, err := countEnabled(ctx, tx)
+			if err != nil {
+				return err
+			}
+			if n >= BoardSize {
+				return ErrBoardFull
+			}
 		}
 
-		var maxSort int
-		if err := tx.QueryRowContext(ctx, `SELECT COALESCE(MAX(sort), 0) FROM timezones`).Scan(&maxSort); err != nil {
-			return fmt.Errorf("read sort: %w", err)
+		var sortValue int
+		if sort == nil {
+			var maxSort int
+			if err := tx.QueryRowContext(ctx,
+				`SELECT COALESCE(MAX(sort), 0) FROM timezones`).Scan(&maxSort); err != nil {
+				return fmt.Errorf("read sort: %w", err)
+			}
+			sortValue = maxSort + 1
+		} else {
+			clash, err := checkSortUnique(ctx, tx, 0, *sort)
+			if err != nil {
+				return err
+			}
+			if len(clash) > 0 {
+				return clash
+			}
+			sortValue = *sort
 		}
+
 		res, err := tx.ExecContext(ctx,
-			`INSERT INTO timezones (label, zone, enabled, sort) VALUES (?, ?, 1, ?)`,
-			label, zone, maxSort+1)
+			`INSERT INTO timezones (label, zone, enabled, sort) VALUES (?, ?, ?, ?)`,
+			label, zone, enabled, sortValue)
 		if err != nil {
 			return fmt.Errorf("insert clock: %w", err)
 		}
@@ -260,7 +325,7 @@ func Create(ctx context.Context, db *sql.DB, label, zone string) (Zone, error) {
 		if err != nil {
 			return fmt.Errorf("insert clock: %w", err)
 		}
-		z = Zone{ID: id, Label: label, Zone: zone, Enabled: true, Sort: maxSort + 1}
+		z = Zone{ID: id, Label: label, Zone: zone, Enabled: enabled, Sort: sortValue}
 		return nil
 	})
 	if err != nil {
@@ -271,6 +336,19 @@ func Create(ctx context.Context, db *sql.DB, label, zone string) (Zone, error) {
 
 // Update changes the label and zone of a clock. It leaves its enabled state and position unchanged.
 func Update(ctx context.Context, db *sql.DB, id int64, label, zone string) (Zone, error) {
+	return update(ctx, db, id, label, zone, nil, nil)
+}
+
+// UpdateWith changes every editable value of a clock. Enabling is refused with
+// ErrBoardFull when nine clocks are already enabled, and a sort value in use by
+// another clock is refused with Errors.
+func UpdateWith(ctx context.Context, db *sql.DB, id int64, v Values) (Zone, error) {
+	enabled, sort := v.Enabled, v.Sort
+	return update(ctx, db, id, v.Label, v.Zone, &enabled, &sort)
+}
+
+// update changes a clock. A nil enabled or sort leaves that value unchanged.
+func update(ctx context.Context, db *sql.DB, id int64, label, zone string, enabled *bool, sort *int) (Zone, error) {
 	var z Zone
 	err := withTx(ctx, db, func(tx *sql.Tx) error {
 		cur, err := get(ctx, tx, id)
@@ -288,11 +366,39 @@ func Update(ctx context.Context, db *sql.DB, id int64, label, zone string) (Zone
 		if len(dup) > 0 {
 			return dup
 		}
+
+		wantEnabled := cur.Enabled
+		if enabled != nil {
+			wantEnabled = *enabled
+		}
+		if wantEnabled && !cur.Enabled {
+			n, err := countEnabled(ctx, tx)
+			if err != nil {
+				return err
+			}
+			if n >= BoardSize {
+				return ErrBoardFull
+			}
+		}
+
+		wantSort := cur.Sort
+		if sort != nil && *sort != cur.Sort {
+			clash, err := checkSortUnique(ctx, tx, id, *sort)
+			if err != nil {
+				return err
+			}
+			if len(clash) > 0 {
+				return clash
+			}
+			wantSort = *sort
+		}
+
 		if _, err := tx.ExecContext(ctx,
-			`UPDATE timezones SET label = ?, zone = ? WHERE id = ?`, label, zone, id); err != nil {
+			`UPDATE timezones SET label = ?, zone = ?, enabled = ?, sort = ? WHERE id = ?`,
+			label, zone, wantEnabled, wantSort, id); err != nil {
 			return fmt.Errorf("update clock: %w", err)
 		}
-		cur.Label, cur.Zone = label, zone
+		cur.Label, cur.Zone, cur.Enabled, cur.Sort = label, zone, wantEnabled, wantSort
 		z = cur
 		return nil
 	})

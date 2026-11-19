@@ -19,6 +19,7 @@ func validSettings() Settings {
 		ColourLabel:      "#4169e1",
 		ColourClock:      "#228b22",
 		ColourUTC:        "#b22222",
+		TablePageSize:    20,
 	}
 }
 
@@ -82,6 +83,30 @@ func TestValidateRefresh(t *testing.T) {
 	}
 }
 
+func TestValidateTablePageSize(t *testing.T) {
+	tests := []struct {
+		size    int
+		wantErr bool
+	}{
+		{size: -1, wantErr: true},
+		{size: 0, wantErr: true},
+		{size: MinTablePageSize - 1, wantErr: true},
+		{size: MinTablePageSize},
+		{size: 20},
+		{size: MaxTablePageSize},
+		{size: MaxTablePageSize + 1, wantErr: true},
+	}
+	for _, tt := range tests {
+		in := validSettings()
+		in.TablePageSize = tt.size
+		_, errs := Validate(in)
+		_, hasErr := errs["table_page_size"]
+		if hasErr != tt.wantErr {
+			t.Errorf("page size %d: error = %v, want error %v (errors: %v)", tt.size, hasErr, tt.wantErr, errs)
+		}
+	}
+}
+
 func TestValidateColours(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -124,9 +149,10 @@ func TestValidateReportsEachField(t *testing.T) {
 		ColourLabel:      "#zzzzzz",
 		ColourClock:      "#123",
 		ColourUTC:        "",
+		TablePageSize:    0,
 	}
 	_, errs := Validate(in)
-	for _, field := range []string{"title", "refresh_seconds", "colour_background", "colour_label", "colour_clock", "colour_utc"} {
+	for _, field := range []string{"title", "refresh_seconds", "colour_background", "colour_label", "colour_clock", "colour_utc", "table_page_size"} {
 		if _, ok := errs[field]; !ok {
 			t.Errorf("missing error for %s: %v", field, errs)
 		}
