@@ -93,9 +93,9 @@ body {
 }
 
 /* Shown when a poll fails. It sits outside #board so that the swap does not remove it. */
-.stale {
+.stale,
+.admin-link {
   position: fixed;
-  right: 1vw;
   bottom: 1vh;
   padding: 0.3em 0.6em;
   font-family: Arial, Helvetica, sans-serif;
@@ -104,6 +104,16 @@ body {
   letter-spacing: 0.1em;
   color: #fff;
   background: #b22222;
+  text-decoration: none;
+}
+
+.stale {
+  right: 1vw;
+}
+
+/* The link to the administration dashboard, styled like the STALE indicator. */
+.admin-link {
+  left: 1vw;
 }
 
 .stale[hidden] {
@@ -312,10 +322,31 @@ button:disabled {
   color: #2e7d32;
 }
 
-.admin-nav {
+.admin-menu {
   display: flex;
   align-items: center;
-  gap: 1rem;
+}
+
+.admin-menu > * {
+  margin: 0;
+}
+
+.admin-menu a,
+.admin-menu button {
+  font: inherit;
+  font-weight: 700;
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  color: #444;
+  text-decoration: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.admin-menu a:hover,
+.admin-menu button:hover {
+  text-decoration: underline;
 }
 
 .panel-actions {
@@ -334,10 +365,6 @@ button:disabled {
   font: inherit;
   width: 14rem;
   padding: 0.3rem 0.5rem;
-}
-
-.admin-nav a {
-  color: #1a4fa0;
 }
 
 .pager {

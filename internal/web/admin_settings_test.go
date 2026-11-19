@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -42,7 +43,9 @@ func TestDashboardShowsSettingsForm(t *testing.T) {
 		`name="colour_utc" type="color" value="#b22222"`,
 		`name="table_page_size" type="number" min="5" max="100" step="1" value="20"`,
 		`<legend>Admin tables</legend>`,
-		`data-testid="tables-link"`,
+		`data-testid="menu-timezones"`,
+		`data-testid="menu-administration"`,
+		`aria-current="page">Administration</a>`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Errorf("dashboard missing %q", want)
@@ -172,5 +175,45 @@ func TestSettingsNeedSessionAndHTMX(t *testing.T) {
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	if rec := serve(h, req); rec.Code != http.StatusForbidden {
 		t.Errorf("without HX-Request: status = %d, want 403", rec.Code)
+	}
+}
+
+// menuItem matches a menu link or logout button and captures its text.
+var menuItem = regexp.MustCompile(`(?s)<(?:a|button)\b[^>]*>(.*?)</(?:a|button)>`)
+
+// menuLinks returns the menu item texts in order, from the nav element.
+func menuLinks(t *testing.T, body string) []string {
+	t.Helper()
+	start := strings.Index(body, `<nav class="admin-menu"`)
+	if start < 0 {
+		t.Fatal("admin menu missing")
+	}
+	end := strings.Index(body[start:], "</nav>")
+	if end < 0 {
+		t.Fatal("admin menu not closed")
+	}
+	nav := body[start : start+end]
+	var links []string
+	for _, m := range menuItem.FindAllStringSubmatch(nav, -1) {
+		links = append(links, strings.TrimSpace(m[1]))
+	}
+	return links
+}
+
+func TestAdminMenuOrder(t *testing.T) {
+	h, sqlDB := newTestServer(t)
+	c := adminSession(t, h, sqlDB)
+
+	want := []string{"Administration", "Timezones table", "Log out"}
+	for _, page := range []string{"/admin", timezonesPath} {
+		body := tableFullPage(t, h, c, page)
+		got := menuLinks(t, body)
+		if strings.Join(got, "|") != strings.Join(want, "|") {
+			t.Errorf("%s menu = %v, want %v", page, got, want)
+		}
+		// The current page's item is marked; the other pages are not.
+		if !strings.Contains(body, `aria-current="page"`) {
+			t.Errorf("%s: current page not marked", page)
+		}
 	}
 }

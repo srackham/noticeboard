@@ -231,6 +231,7 @@ func TestIndexIsFullPage(t *testing.T) {
 		`<script src="/static/js/app.js" defer></script>`,
 		`id="board"`,
 		`data-testid="stale"`,
+		`<a href="/admin" class="admin-link" data-testid="admin-link">ADMIN</a>`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Errorf("index missing %q", want)
