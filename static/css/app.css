@@ -145,6 +145,12 @@ body.admin.with-sidebar {
   padding: 0 1rem;
 }
 
+/* Admin pages with the sidebar are left-aligned beside it, not centred. */
+body.admin.with-sidebar .admin-main {
+  margin-left: 2rem;
+  margin-right: auto;
+}
+
 .admin-bar {
   display: flex;
   align-items: center;
