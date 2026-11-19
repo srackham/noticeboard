@@ -184,7 +184,7 @@ var menuItem = regexp.MustCompile(`(?s)<(?:a|button)\b[^>]*>(.*?)</(?:a|button)>
 // menuLinks returns the menu item texts in order, from the nav element.
 func menuLinks(t *testing.T, body string) []string {
 	t.Helper()
-	start := strings.Index(body, `<nav class="admin-menu"`)
+	start := strings.Index(body, `<nav class="admin-sidebar"`)
 	if start < 0 {
 		t.Fatal("admin menu missing")
 	}

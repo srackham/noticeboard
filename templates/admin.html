@@ -42,18 +42,22 @@
   <script src="/static/js/htmx.min.js" defer></script>
   <script src="/static/js/app.js" defer></script>
 </head>
-<body class="admin">
-  <main class="admin-main wide">
-    <header class="admin-bar">
-      <h1>Administration</h1>
-      <nav class="admin-menu" aria-label="Administration menu">
-        <a href="/" data-testid="menu-home">Home</a>
-        <a href="/admin" data-testid="menu-administration" aria-current="page">Administration</a>
-        <a href="/admin/tables/timezones" data-testid="menu-timezones">Timezones table</a>
+<body class="admin with-sidebar">
+  <nav class="admin-sidebar" aria-label="Administration menu">
+    <ul>
+      <li><a href="/" data-testid="menu-home">Home</a></li>
+      <li><a href="/admin" data-testid="menu-administration" aria-current="page">Administration</a></li>
+      <li><a href="/admin/tables/timezones" data-testid="menu-timezones">Timezones table</a></li>
+      <li>
         <form hx-post="/admin/logout">
           <button type="submit" data-testid="logout">Log out</button>
         </form>
-      </nav>
+      </li>
+    </ul>
+  </nav>
+  <main class="admin-main wide">
+    <header class="admin-bar">
+      <h1>Administration</h1>
     </header>
 
     <section class="panel" data-testid="clocks-panel">

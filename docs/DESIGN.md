@@ -296,7 +296,7 @@ The table pages are generic. `{table}` is a registered slug (`admintable.All`), 
 - **Paging:** `page` is 1-based; missing means page 1; anything else that is not a positive whole number gives 400; a page past the end shows the last page. The count and rows are read in one transaction, and the clamping rule is `internal/paging.Clamp`. `List(ctx, pg, search)` applies the search before counting.
 - **Regions:** `#table-grid` and `#table-form`. Responses are out-of-band swaps of the grid and the form, as for the clock list.
 - **Errors:** a refusal gives 422 with the message in the form region, and a stale `{id}` gives 404 with the refreshed grid and "That record no longer exists.".
-- **Header menu:** both admin pages (`/admin` and `/admin/tables/{table}`) share a horizontal menu in the admin bar: `Home` (`/`), `Administration` (`/admin`), `Timezones table` (`/admin/tables/timezones`) and `Log out` (the `POST /admin/logout` form). All items are bold dark grey and look the same; the current page's item also carries `aria-current="page"` for assistive technology.
+- **Sidebar menu:** both admin pages (`/admin` and `/admin/tables/{table}`) share a fixed vertical menu in a left sidebar, which does not scroll with the page: `Home` (`/`), `Administration` (`/admin`), `Timezones table` (`/admin/tables/timezones`) and `Log out` (the `POST /admin/logout` form). All items are bold dark grey and look the same; the current page's item also carries `aria-current="page"` for assistive technology.
 - **Adding a table:** an adapter in `internal/admintable` plus one line in `All`. No handler, route or template changes.
 
 ## 6. Board display
