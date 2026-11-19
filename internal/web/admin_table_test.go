@@ -672,7 +672,6 @@ func TestTableSearchFormIsLeftOfAddRecord(t *testing.T) {
 	}
 	for _, want := range []string{
 		`id="table-search-input" name="q" type="search"`,
-		`data-testid="search-button">Search</button>`,
 		`hx-get="` + timezonesPath + `"`,
 	} {
 		if !strings.Contains(body, want) {

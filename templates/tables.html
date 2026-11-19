@@ -28,7 +28,6 @@
                 hx-get="/admin/tables/{{.Slug}}" hx-target="#table-grid" hx-swap="outerHTML" hx-push-url="true">
             <input id="table-search-input" name="q" type="search" value="{{.Grid.Search}}"
                    placeholder="Search" aria-label="Search records">
-            <button type="submit" data-testid="search-button">Search</button>
           </form>
           <button type="button" hx-get="/admin/tables/{{.Slug}}/new" hx-target="#table-form" hx-swap="innerHTML"
                   data-testid="add-record">Add record</button>
