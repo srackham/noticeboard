@@ -32,7 +32,7 @@ Download `noticeboard-<release_tag>-linux-amd64` executable from the [Github Rel
 
 ### Microsoft Windows
 
-Download `noticeboard-<release_tag>-linux-amd64` executable from the [Github Releases page](https://github.com/srackham/noticeboard/releases), rename it to `noticeboard.exe`.
+Download `noticeboard-<release_tag>-windows-amd64.exe` executable from the [Github Releases page](https://github.com/srackham/noticeboard/releases), rename it to `noticeboard.exe`.
 
 ## Usage
 
