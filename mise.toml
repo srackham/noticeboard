@@ -1,6 +1,13 @@
 [tools]
 go = "1.26.6"
 
+# Single source of truth for release artifact names (%s = version tag).
+[env]
+DIST_DIR = "dist"
+DIST_LINUX = "noticeboard-%s-linux-amd64"
+DIST_WINDOWS = "noticeboard-%s-windows-amd64.exe"
+DIST_CHECKSUMS = "checksums-%s-sha256.txt"
+
 [tasks.test]
 description = "Run all tests"
 run = "go test ./..."
@@ -31,21 +38,25 @@ set -euo pipefail
 die() { echo "error: $*" >&2; exit 1; }
 v="$usage_version"
 
+linux="$(printf "$DIST_LINUX" "$v")"
+windows="$(printf "$DIST_WINDOWS" "$v")"
+checksums="$(printf "$DIST_CHECKSUMS" "$v")"
+
 [[ $v =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "illegal version tag: $v"
 git rev-parse -q --verify "refs/tags/$v" >/dev/null || die "local tag $v does not exist"
 [[ "$(git rev-parse "$v^{commit}")" == "$(git rev-parse HEAD)" ]] || die "tag $v does not point at HEAD"
 [[ -z "$(git status --porcelain)" ]] || die "dirty working directory"
 
-if compgen -G "dist/noticeboard-$v-*" >/dev/null; then
-  die "built version $v already exists"
-fi
+for f in "$linux" "$windows" "$checksums"; do
+  [[ ! -e "$DIST_DIR/$f" ]] || die "built version $v already exists ($DIST_DIR/$f)"
+done
 
-mkdir -p dist
-trap 'rm -f dist/noticeboard-"$v"-* dist/checksums-$v-sha256.txt' ERR
+mkdir -p "$DIST_DIR"
+trap 'rm -f "$DIST_DIR/$linux" "$DIST_DIR/$windows" "$DIST_DIR/$checksums"' ERR
 
-GOOS=linux   GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o "dist/noticeboard-$v-linux-amd64" .
-GOOS=windows GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o "dist/noticeboard-$v-windows-amd64.exe" .
-(cd dist && sha256sum "noticeboard-$v-linux-amd64" "noticeboard-$v-windows-amd64.exe" > checksums-$v-sha256.txt)
+GOOS=linux   GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o "$DIST_DIR/$linux" .
+GOOS=windows GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o "$DIST_DIR/$windows" .
+(cd "$DIST_DIR" && sha256sum "$linux" "$windows" > "$checksums")
 '''
 
 [tasks.release]
@@ -58,18 +69,18 @@ set -euo pipefail
 die() { echo "error: $*" >&2; exit 1; }
 v="$usage_version"
 
+linux="$(printf "$DIST_LINUX" "$v")"
+windows="$(printf "$DIST_WINDOWS" "$v")"
+checksums="$(printf "$DIST_CHECKSUMS" "$v")"
+
 [[ $v =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "illegal version tag: $v"
 git rev-parse -q --verify "refs/tags/$v" >/dev/null || die "local tag $v does not exist"
 
-files=(
-  "dist/noticeboard-$v-linux-amd64"
-  "dist/noticeboard-$v-windows-amd64.exe"
-  "dist/checksums-$v-sha256.txt"
-)
+files=("$DIST_DIR/$linux" "$DIST_DIR/$windows" "$DIST_DIR/$checksums")
 for f in "${files[@]}"; do
   [[ -f $f ]] || die "missing artifact: $f (run 'mise run dist $v' first)"
 done
-(cd dist && sha256sum -c checksums-$v-sha256.txt) || die "checksum verification failed"
+(cd "$DIST_DIR" && sha256sum -c "$checksums") || die "checksum verification failed"
 
 git push origin "refs/tags/$v"
 
