@@ -28,11 +28,11 @@ See [Development](#development) if you prefer building from source instead of us
 
 ### Linux
 
-Download `noticeboard-linux-amd64` executable from the [Github distribution folder](https://github.com/srackham/noticeboard/tree/main/dist), rename it to `noticeboard` and make it executable with `chmod +x noticeboard`.
+Download `noticeboard-<release_tag>-linux-amd64` executable from the [Github Releases page](https://github.com/srackham/noticeboard/releases), rename it to `noticeboard` and make it executable with `chmod +x noticeboard`.
 
 ### Microsoft Windows
 
-Download the `noticeboard-windows-amd64.exe` executable from the [Github distribution folder](https://github.com/srackham/noticeboard/tree/main/dist), rename it to `noticeboard.exe`.
+Download `noticeboard-<release_tag>-linux-amd64` executable from the [Github Releases page](https://github.com/srackham/noticeboard/releases), rename it to `noticeboard.exe`.
 
 ## Usage
 
