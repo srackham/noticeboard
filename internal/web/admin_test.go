@@ -89,7 +89,7 @@ func TestLoginPageShowsForm(t *testing.T) {
 	for _, want := range []string{
 		`id="login-form"`,
 		`hx-post="/admin/login"`,
-		`name="username"`,
+		`id="username" name="username" type="text" autocomplete="username" autocapitalize="off" spellcheck="false" value="" autofocus required`,
 		`name="password"`,
 		`type="password"`,
 		`<a class="button" href="/" data-testid="login-cancel">Cancel</a>`,
