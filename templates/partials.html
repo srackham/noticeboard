@@ -1,0 +1,18 @@
+{{/* Shared partials. */}}
+
+{{/* admin-sidebar renders the administration menu. Its argument is the active
+     menu item: "home", "administration", "timezones", or "" for none. */}}
+{{define "admin-sidebar"}}
+  <nav class="admin-sidebar" aria-label="Administration menu">
+    <ul>
+      <li><a href="/" data-testid="menu-home"{{if eq . "home"}} aria-current="page"{{end}}>Home</a></li>
+      <li><a href="/admin" data-testid="menu-administration"{{if eq . "administration"}} aria-current="page"{{end}}>Administration</a></li>
+      <li><a href="/admin/tables/timezones" data-testid="menu-timezones"{{if eq . "timezones"}} aria-current="page"{{end}}>Timezones table</a></li>
+      <li>
+        <form hx-post="/admin/logout">
+          <button type="submit" data-testid="logout">Log out</button>
+        </form>
+      </li>
+    </ul>
+  </nav>
+{{end}}

@@ -43,18 +43,7 @@
   <script src="/static/js/app.js" defer></script>
 </head>
 <body class="admin with-sidebar">
-  <nav class="admin-sidebar" aria-label="Administration menu">
-    <ul>
-      <li><a href="/" data-testid="menu-home">Home</a></li>
-      <li><a href="/admin" data-testid="menu-administration" aria-current="page">Administration</a></li>
-      <li><a href="/admin/tables/timezones" data-testid="menu-timezones">Timezones table</a></li>
-      <li>
-        <form hx-post="/admin/logout">
-          <button type="submit" data-testid="logout">Log out</button>
-        </form>
-      </li>
-    </ul>
-  </nav>
+  {{template "admin-sidebar" "administration"}}
   <main class="admin-main wide">
     <header class="admin-bar">
       <h1>Administration</h1>
