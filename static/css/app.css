@@ -339,6 +339,28 @@ button:disabled {
   padding: 0.6rem 1rem;
 }
 
+/* In the Colours fieldset the labels sit to the left of their inputs, in one
+   aligned column, instead of above them. The fieldset grid shares its column
+   sizes with each field through subgrid, so every colour input starts at the
+   same x position. */
+.settings-form .colour-fields {
+  grid-template-columns: max-content auto;
+  column-gap: 0.75rem;
+}
+
+.settings-form .colour-fields .field {
+  display: grid;
+  grid-template-columns: subgrid;
+  grid-column: 1 / -1;
+  align-items: center;
+  gap: 0.25rem 0.75rem;
+}
+
+/* A field error spans the label and input columns. */
+.settings-form .colour-fields .field-error {
+  grid-column: 1 / -1;
+}
+
 .notice {
   margin: 0;
   font-weight: 700;
