@@ -179,8 +179,8 @@ func TestSettingsNeedSessionAndHTMX(t *testing.T) {
 	}
 }
 
-// menuItem matches a menu link or logout button and captures its text.
-var menuItem = regexp.MustCompile(`(?s)<(?:a|button)\b[^>]*>(.*?)</(?:a|button)>`)
+// menuItem matches a menu link, group label, or logout button and captures its text.
+var menuItem = regexp.MustCompile(`(?s)<(?:a|button|span)\b[^>]*>(.*?)</(?:a|button|span)>`)
 
 // menuLinks returns the menu item texts in order, from the nav element.
 func menuLinks(t *testing.T, body string) []string {
@@ -205,7 +205,7 @@ func TestAdminMenuOrder(t *testing.T) {
 	h, sqlDB := newTestServer(t)
 	c := adminSession(t, h, sqlDB)
 
-	want := []string{"Home", "Administration", "Timezones table", "Log out"}
+	want := []string{"Home", "Administration", "Tables", "timezones", "Log out"}
 	for _, page := range []string{"/admin", timezonesPath} {
 		body := tableFullPage(t, h, c, page)
 		got := menuLinks(t, body)

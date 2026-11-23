@@ -22,7 +22,7 @@ run = "go mod verify && go mod tidy"
 
 [tasks.build]
 description = "Build the ./noticeboard dev binary (no CGO)"
-depends = ["tidy"]
+depends = ["tidy", "test"]
 env = { CGO_ENABLED = "0" }
 run = "go build -o noticeboard ."
 

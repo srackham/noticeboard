@@ -414,6 +414,19 @@ button:disabled {
   text-decoration: underline;
 }
 
+/* A menu group heading (not a link) and its indented, regular-weight items. */
+.admin-sidebar .menu-label {
+  display: block;
+  padding: 0.5rem 1rem;
+  font-weight: 700;
+  color: #444;
+}
+
+.admin-sidebar .menu-sub a {
+  padding-left: 2rem;
+  font-weight: 400;
+}
+
 .panel-actions {
   display: flex;
   align-items: center;
