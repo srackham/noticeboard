@@ -140,20 +140,23 @@
       hx-post="/admin/settings" hx-target="this" hx-swap="outerHTML">
   {{with .Notice}}<p class="notice" role="status" data-testid="settings-saved">{{.}}</p>{{end}}
 
-  <div class="field">
-    <label for="title">Title</label>
-    <input id="title" name="title" type="text" maxlength="80" value="{{.Title}}">
-    <p class="hint">Leave blank to hide the header.</p>
-    {{with index .Errors "title"}}<p class="field-error" data-testid="error-title">{{.}}</p>{{end}}
-  </div>
+  <fieldset class="settings-group">
+    <legend>Clocks</legend>
+    <div class="field">
+      <label for="title">Title</label>
+      <input id="title" name="title" type="text" maxlength="80" value="{{.Title}}">
+      <p class="hint">Leave blank to hide the header.</p>
+      {{with index .Errors "title"}}<p class="field-error" data-testid="error-title">{{.}}</p>{{end}}
+    </div>
 
-  <div class="field">
-    <label for="refresh_seconds">Refresh interval (seconds)</label>
-    <input id="refresh_seconds" name="refresh_seconds" type="number" min="1" max="60" step="1" value="{{.RefreshSeconds}}">
-    {{with index .Errors "refresh_seconds"}}<p class="field-error" data-testid="error-refresh_seconds">{{.}}</p>{{end}}
-  </div>
+    <div class="field">
+      <label for="refresh_seconds">Refresh interval (seconds)</label>
+      <input id="refresh_seconds" name="refresh_seconds" type="number" min="1" max="60" step="1" value="{{.RefreshSeconds}}">
+      {{with index .Errors "refresh_seconds"}}<p class="field-error" data-testid="error-refresh_seconds">{{.}}</p>{{end}}
+    </div>
+  </fieldset>
 
-  <fieldset class="colours colour-fields">
+  <fieldset class="settings-group colour-fields">
     <legend>Colours</legend>
     <div class="field">
       <label for="colour_background">Background</label>
@@ -177,7 +180,7 @@
     </div>
   </fieldset>
 
-  <fieldset class="colours">
+  <fieldset class="settings-group">
     <legend>Admin tables</legend>
     <div class="field">
       <label for="table_page_size">Rows per page</label>

@@ -331,7 +331,7 @@ button:disabled {
   color: #666;
 }
 
-.settings-form .colours {
+.settings-form .settings-group {
   display: grid;
   gap: 0.6rem;
   border: 1px solid #ddd;
