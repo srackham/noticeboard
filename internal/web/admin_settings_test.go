@@ -43,7 +43,7 @@ func TestDashboardShowsSettingsForm(t *testing.T) {
 		`name="colour_utc" type="color" value="#b22222"`,
 		`name="table_page_size" type="number" min="5" max="100" step="1" value="20"`,
 		`<legend>Clocks</legend>`,
-		`<legend>Admin tables</legend>`,
+		`<legend>Tables</legend>`,
 		`data-testid="menu-timezones"`,
 		`data-testid="menu-administration"`,
 		`aria-current="page">Administration</a>`,

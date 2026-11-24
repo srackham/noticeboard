@@ -339,6 +339,10 @@ button:disabled {
   padding: 0.6rem 1rem;
 }
 
+.settings-form .settings-group legend {
+  font-weight: 700;
+}
+
 /* In the Colours fieldset the labels sit to the left of their inputs, in one
    aligned column, instead of above them. The fieldset grid shares its column
    sizes with each field through subgrid, so every colour input starts at the
