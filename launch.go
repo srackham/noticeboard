@@ -1,7 +1,7 @@
 package main
 
 // Desktop mode (DESIGN.md section 9): serve --launch and open <address> open the
-// clocks page in a browser app-mode window. The launcher is adapted from htmx-todos/gui.go.
+// clocks page in a browser app-mode window.
 // It is plain Go, so the binary needs no webview library and no CGO.
 
 import (
@@ -109,7 +109,7 @@ func firstFound(candidates ...string) (string, bool) {
 func chromiumArgs(url string) []string {
 	return []string{
 		"--app=" + url,
-		"--user-data-dir=" + filepath.Join(os.TempDir(), "noticeboard-gui"),
+		"--user-data-dir=" + filepath.Join(os.TempDir(), "noticeboard-launch"),
 	}
 }
 

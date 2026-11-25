@@ -38,7 +38,7 @@ Reference mock-up: [`docs/time-display.png`](time-display.png)
 A single Go binary using only the standard library for HTTP and `database/sql` for storage. There is no web framework and no PocketBase.
 
 - **Routing:** the standard `ServeMux` (Go 1.22 method patterns, such as `POST /admin/zones/{id}`) serves all routes. Handlers render `html/template` fragments, and HTMX swaps them into the page.
-- **SQLite:** `database/sql` with `modernc.org/sqlite`, a pure-Go translation of SQLite. The driver is imported blank and opened as `"sqlite"`. The data file is `./noticeboard.db` by default (`--db`), opened with the rollback journal (`journal_mode=DELETE`, not WAL) and a 5-second busy timeout so that `admin init` can run while the server is running. This differs from `htmx-todos`, which uses the cgo `go-sqlite3` driver.
+- **SQLite:** `database/sql` with `modernc.org/sqlite`, a pure-Go translation of SQLite. The driver is imported blank and opened as `"sqlite"`. The data file is `./noticeboard.db` by default (`--db`), opened with the rollback journal (`journal_mode=DELETE`, not WAL) and a 5-second busy timeout so that `admin init` can run while the server is running.
 - **No CGO:** no C compiler is needed. The binary builds with `CGO_ENABLED=0`, and cross-compiles with `GOOS`/`GOARCH` alone.
 - **Schema migrations:** numbered SQL files in `migrations/`, embedded and applied in order, each in its own transaction. The applied version is stored in `PRAGMA user_version`. Migrations are forward-only: after a deployment, a schema change goes in a new numbered file. Before the first deployment, earlier migrations may be folded into `0001_init.sql`. Startup refuses a database whose `user_version` is higher than the newest migration the binary knows.
 - **Authentication:** one admin account in the database, passwords hashed with bcrypt, and server-side sessions (section 4).
@@ -52,7 +52,7 @@ A single Go binary using only the standard library for HTTP and `database/sql` f
 ```
 noticeboard/
 ├── main.go                 # subcommands: serve [--addr --db --log --launch], open <address>, admin init [--db]; --help
-├── gui.go                  # launchGUI: browser app-mode (adapted from htmx-todos)
+├── launch.go               # desktop mode: browser app-mode
 ├── assets.go               # go:embed for templates/ and static/
 ├── internal/
 │   ├── db/                 # open SQLite (modernc.org/sqlite), run migrations
@@ -385,7 +385,7 @@ The clocks page is configured entirely from the admin dashboard. There are no en
 
 - `noticeboard serve --launch` starts the HTTP server, and once it is listening, opens `/clocks` (the clocks page) in a browser app-mode window.
 - `noticeboard open <address>` opens an already-running clocks page at that address in a browser app-mode window. It does not start a server. The address is a host and port, or a full URL.
-- The launcher is adapted from `htmx-todos/gui.go`. It tries, in order, Edge or Chrome in app mode on Windows; Chrome, Chromium, Brave or `xdg-open` on Linux; and Chrome or `open` on macOS.
+- The launcher tries, in order, Edge or Chrome in app mode on Windows; Chrome, Chromium, Brave or `xdg-open` on Linux; and Chrome or `open` on macOS.
 - It requires no webview library. The launcher is plain Go, and the binary needs no CGO (section 2).
 
 **Behaviour**
@@ -447,7 +447,7 @@ Per the project guidelines:
 6. **Admin authentication:** `admin init` command with bcrypt and username validation and normalisation; login against `admins` with the dummy-hash comparison; `sessions` rows and cookie handling; HTMX forms and `HX-Redirect`; middleware; logout; `HX-Request` check; login hint when no admin exists; `internal/auditlog` and request logging; tests against a temporary database.
 7. **Clock management:** `internal/zones` repository and validation; list, add, edit, enable/disable, move, delete with `hx-confirm`; uniqueness, the nine-enabled limit, and validation messages.
 8. **Settings UI:** form with colour pickers, number inputs and validation messages.
-9. **Desktop mode:** `serve --launch` and `open <address>`, with the launcher adapted from `htmx-todos/gui.go`.
+9. **Desktop mode:** `serve --launch` and `open <address>`.
 10. **Polish:** test IDs, README run instructions (including the PocketBase reference, which is now wrong), mise tasks, the DSEG7 side-by-side check.
 
 ## 13. Decisions and assumptions
