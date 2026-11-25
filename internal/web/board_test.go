@@ -218,7 +218,7 @@ func TestBoardDatabaseErrorReturns500(t *testing.T) {
 
 func TestIndexIsFullPage(t *testing.T) {
 	h, _ := newTestServer(t)
-	rec := get(t, h, "/")
+	rec := get(t, h, "/clocks")
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200", rec.Code)
 	}
@@ -248,7 +248,7 @@ func TestIndexIsFullPage(t *testing.T) {
 func TestIndexTitleUsesSettingsTitle(t *testing.T) {
 	h, sqlDB := newTestServer(t)
 	exec(t, sqlDB, `UPDATE settings SET title = 'Harbour'`)
-	body := get(t, h, "/").Body.String()
+	body := get(t, h, "/clocks").Body.String()
 	if !strings.Contains(body, "<title>Harbour</title>") {
 		t.Errorf("page title missing:\n%s", body)
 	}

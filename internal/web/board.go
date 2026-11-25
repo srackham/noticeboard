@@ -34,6 +34,11 @@ type clockView struct {
 	Time  string // HH:MM
 }
 
+// handleRootRedirect sends the root path to the board's canonical URL.
+func (s *Server) handleRootRedirect(w http.ResponseWriter, r *http.Request) {
+	http.Redirect(w, r, "/clocks", http.StatusFound)
+}
+
 // handleIndex serves the full page with the board embedded.
 func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
 	s.render(w, r, "index.html")

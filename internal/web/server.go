@@ -51,8 +51,9 @@ func New(db *sql.DB, assets fs.FS, audit *auditlog.Logger) (*Server, error) {
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 
-	// Public site.
-	mux.HandleFunc("GET /{$}", s.handleIndex)
+	// Public site. The board's canonical URL is /clocks; the root redirects there.
+	mux.HandleFunc("GET /{$}", s.handleRootRedirect)
+	mux.HandleFunc("GET /clocks", s.handleIndex)
 	mux.HandleFunc("GET /board", s.handleBoard)
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServerFS(s.static)))
 

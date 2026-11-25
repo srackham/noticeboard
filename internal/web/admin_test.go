@@ -92,7 +92,7 @@ func TestLoginPageShowsForm(t *testing.T) {
 		`id="username" name="username" type="text" autocomplete="username" autocapitalize="off" spellcheck="false" value="" autofocus required`,
 		`name="password"`,
 		`type="password"`,
-		`<a class="button" href="/" data-testid="login-cancel">Cancel</a>`,
+		`<a class="button" href="/clocks" data-testid="login-cancel">Cancel</a>`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Errorf("login page missing %q", want)

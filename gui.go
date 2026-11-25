@@ -133,12 +133,12 @@ func openURL(address string) string {
 func boardURL(hostPort string) string {
 	host, port, err := net.SplitHostPort(hostPort)
 	if err != nil {
-		return "http://" + hostPort + "/"
+		return "http://" + hostPort + "/clocks"
 	}
 	if ip := net.ParseIP(host); host == "" || (ip != nil && ip.IsUnspecified()) {
 		host = "127.0.0.1"
 	}
-	return "http://" + net.JoinHostPort(host, port) + "/"
+	return "http://" + net.JoinHostPort(host, port) + "/clocks"
 }
 
 // isAddrInUse reports whether a listen failed because the address is already in use.

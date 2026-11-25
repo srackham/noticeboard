@@ -5,7 +5,7 @@
 {{define "admin-sidebar"}}
   <nav class="admin-sidebar" aria-label="Administration menu">
     <ul>
-      <li><a href="/" data-testid="menu-home"{{if eq . "home"}} aria-current="page"{{end}}>Home</a></li>
+      <li><a href="/clocks" data-testid="menu-home"{{if eq . "home"}} aria-current="page"{{end}}>Home</a></li>
       <li><a href="/admin" data-testid="menu-administration"{{if eq . "administration"}} aria-current="page"{{end}}>Administration</a></li>
       <li>
         <span class="menu-label" data-testid="menu-tables">Tables</span>

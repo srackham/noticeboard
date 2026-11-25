@@ -69,7 +69,7 @@ noticeboard/
 │   ├── auth/               # admin account, password hashing, sessions
 │   ├── auditlog/           # text audit log, capped at 1000 lines
 │   └── web/                # HTTP handlers and rendering
-│       ├── board.go        # GET /, GET /board
+│       ├── board.go        # GET /clocks, GET /board, GET / (redirect)
 │       ├── admin_auth.go   # login, logout, session middleware
 │       ├── admin_zones.go  # zone CRUD, toggle, move (dashboard clock list)
 │       ├── admin_table.go  # generic table pages: /admin/tables/{table}
@@ -210,7 +210,7 @@ The mock-up is a single moment, not a specification. Zones are IANA IDs, so dayl
 
 ### 4.2 Login and session
 
-1. `GET /admin/login` renders the form (username and password) with a Cancel link beneath Log in that opens the board page `/`. Like all admin forms, it is an HTMX form (see CSRF below).
+1. `GET /admin/login` renders the form (username and password) with a Cancel link beneath Log in that opens the board page `/clocks`. Like all admin forms, it is an HTMX form (see CSRF below).
 2. `POST /admin/login` normalises the username (section 4.1), looks up the admin and checks the password with `bcrypt.CompareHashAndPassword`. If the username does not match, the server still runs the comparison against a dummy bcrypt hash, so the response time does not reveal which usernames exist. A failure returns HTTP 422 with the message "Username or password is incorrect.", for both a wrong username and a wrong password. A username that contains white space cannot match, so it gets the same message.
 3. On success the server generates 32 random bytes (`crypto/rand`) and sends them base64url-encoded in a cookie named `noticeboard_session`. It stores the hex SHA-256 of the token in `sessions` with an expiry 12 hours ahead. The cookie has `HttpOnly`, `SameSite=Strict` and `Path=/admin`, and `Secure` when the request arrived over TLS (`r.TLS != nil`). The response carries `HX-Redirect: /admin`. Several sessions may be active at once.
 4. `POST /admin/logout` deletes the session row, expires the cookie (`MaxAge=-1`) and responds with `HX-Redirect: /admin/login`.
@@ -247,7 +247,8 @@ The application runs on a VPN, so the design relies on the network for protectio
 
 | Method | Path       | Purpose                                                               |
 | ------ | ---------- | --------------------------------------------------------------------- |
-| GET    | `/`        | Full page: HTML shell, styles, font, HTMX, `app.js`; embeds the board |
+| GET    | `/`        | Redirects to `/clocks`                                                |
+| GET    | `/clocks`  | Full page: HTML shell, styles, font, HTMX, `app.js`; embeds the board |
 | GET    | `/board`   | Board fragment: title, grid of clocks, polling attributes             |
 | GET    | `/static/` | Embedded CSS, JavaScript and font files                               |
 
@@ -296,7 +297,7 @@ The table pages are generic. `{table}` is a registered slug (`admintable.All`), 
 - **Paging:** `page` is 1-based; missing means page 1; anything else that is not a positive whole number gives 400; a page past the end shows the last page. The count and rows are read in one transaction, and the clamping rule is `internal/paging.Clamp`. `List(ctx, pg, search)` applies the search before counting.
 - **Regions:** `#table-grid` and `#table-form`. Responses are out-of-band swaps of the grid and the form, as for the clock list.
 - **Errors:** a refusal gives 422 with the message in the form region, and a stale `{id}` gives 404 with the refreshed grid and "That record no longer exists.".
-- **Sidebar menu:** both admin pages (`/admin` and `/admin/tables/{table}`) share a fixed vertical menu in a left sidebar, which does not scroll with the page: `Home` (`/`), `Administration` (`/admin`), `Timezones table` (`/admin/tables/timezones`) and `Log out` (the `POST /admin/logout` form). All items are bold dark grey and look the same; the current page's item also carries `aria-current="page"` for assistive technology.
+- **Sidebar menu:** both admin pages (`/admin` and `/admin/tables/{table}`) share a fixed vertical menu in a left sidebar, which does not scroll with the page: `Home` (`/clocks`), `Administration` (`/admin`), `Tables` (a heading, not a link) with the indented `timezones` link (`/admin/tables/timezones`) and `Log out` (the `POST /admin/logout` form). All items are bold dark grey and look the same; the current page's item also carries `aria-current="page"` for assistive technology.
 - **Adding a table:** an adapter in `internal/admintable` plus one line in `All`. No handler, route or template changes.
 
 ## 6. Board display
@@ -383,7 +384,7 @@ The board is configured entirely from the admin dashboard. There are no environm
 
 ## 9. Desktop mode
 
-- `noticeboard serve --launch` starts the HTTP server, and once it is listening, opens `/` (the board) in a browser app-mode window.
+- `noticeboard serve --launch` starts the HTTP server, and once it is listening, opens `/clocks` (the board) in a browser app-mode window.
 - `noticeboard open <address>` opens an already-running board at that address in a browser app-mode window. It does not start a server. The address is a host and port, or a full URL.
 - The launcher is adapted from `htmx-todos/gui.go`. It tries, in order, Edge or Chrome in app mode on Windows; Chrome, Chromium, Brave or `xdg-open` on Linux; and Chrome or `open` on macOS.
 - It requires no webview library. The launcher is plain Go, and the binary needs no CGO (section 2).
