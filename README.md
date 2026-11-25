@@ -4,11 +4,11 @@ A Web application written in Go + HTMX + SQLite to mimic the functionality of th
 
 ## Features
 
-- A public board showing up to nine world clocks in a 3×3 grid, in 24-hour `HH:MM` time. The UTC clock is red and the other clocks are green. The colours can be changed.
-- Live updates: the board refreshes itself at a configurable interval, and shows a STALE indicator if an update fails.
-- An administration dashboard, protected by login, for managing the clocks (add, edit, enable or disable, reorder, delete) and the board settings (title, colours, refresh interval).
+- A public clocks page showing up to nine world clocks in a 3×3 grid, in 24-hour `HH:MM` time. The UTC clock is red and the other clocks are green. The colours can be changed.
+- Live updates: the clocks page refreshes itself at a configurable interval, and shows a STALE indicator if an update fails.
+- An administration dashboard, protected by login, for managing the clocks (add, edit, enable or disable, reorder, delete) and the clock display settings (title, colours, refresh interval).
 - Each clock's time zone is chosen from a list of IANA zones, so daylight saving is applied automatically.
-- Desktop mode: `serve --launch` opens the board in a browser app-mode window, and `open <address>` opens a board that is already running.
+- Desktop mode: `serve --launch` opens the clocks page in a browser app-mode window, and `open <address>` opens a clocks page that is already running.
 - A single self-contained binary. Data is kept in one SQLite file, and building needs no C compiler.
 - An audit log of logins and changes made in the administration pages.
 
@@ -52,20 +52,20 @@ The username must be one or more printable characters with no spaces. The passwo
 
 The server listens on `127.0.0.1:8080` by default. Then open:
 
-- the board at <http://127.0.0.1:8080/>
+- the clocks page at <http://127.0.0.1:8080/clocks>
 - the administration pages at <http://127.0.0.1:8080/admin/login>
 
 Stop the server with Ctrl+c.
 
 ### Desktop app mode
 
-To open the board in a local app-mode browser window:
+To open the clocks page in a local app-mode browser window:
 
 ```sh
 ./noticeboard serve --launch
 ```
 
-To open a board that is already running, for example on another host machine:
+To open a clocks page that is already running, for example on another host machine:
 
 ```sh
 ./noticeboard open dell7090:8080
@@ -109,7 +109,7 @@ See [_Routes_ in the design specification](./docs/DESIGN.md#5-routes).
 ### Requirements
 
 - [mise](https://mise.jdx.dev/), which installs the Go version pinned in `mise.toml`. Alternatively, install Go 1.26.6 yourself.
-- A host clock kept accurate, for example with NTP. The board shows the host's time.
+- A host clock kept accurate, for example with NTP. The clocks page shows the host's time.
 
 ### Build
 

@@ -28,7 +28,7 @@ func (e FieldErrors) Error() string {
 }
 
 // Refused is a save the table's rules rejects as a whole, such as adding a
-// clock when the board is full.
+// clock when the clock limit is reached.
 type Refused struct {
 	Message string
 }

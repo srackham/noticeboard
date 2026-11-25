@@ -15,8 +15,8 @@ import (
 	"unicode/utf8"
 )
 
-// BoardSize is the most clocks that may be enabled. The board is a 3×3 grid.
-const BoardSize = 9
+// MaxClocks is the most clocks that may be enabled. The clocks page is a 3×3 grid.
+const MaxClocks = 9
 
 // MaxLabelLength is the longest label, in characters.
 const MaxLabelLength = 60
@@ -49,8 +49,8 @@ func (e Errors) Error() string {
 var (
 	// ErrNotFound means no clock has the given ID.
 	ErrNotFound = errors.New("clock not found")
-	// ErrBoardFull means nine clocks are already enabled.
-	ErrBoardFull = errors.New("Nine clocks are already enabled. Disable one first.")
+	// ErrTooManyClocks means nine clocks are already enabled.
+	ErrTooManyClocks = errors.New("Nine clocks are already enabled. Disable one first.")
 )
 
 // Direction is the way a clock moves in the list.
@@ -131,7 +131,7 @@ func checkUnique(ctx context.Context, q queryer, id int64, label, zone string) (
 		return nil, fmt.Errorf("check zone: %w", err)
 	}
 	if n > 0 {
-		errs[FieldZone] = "That time zone is already on the board."
+		errs[FieldZone] = "That time zone is already on the clocks page."
 	}
 	if len(errs) == 0 {
 		return nil, nil
@@ -256,13 +256,13 @@ func checkSortUnique(ctx context.Context, q queryer, id int64, sort int) (Errors
 }
 
 // Create adds an enabled clock at the end of the list. It returns Errors for
-// invalid or duplicate input, and ErrBoardFull when nine clocks are already enabled.
+// invalid or duplicate input, and ErrTooManyClocks when nine clocks are already enabled.
 func Create(ctx context.Context, db *sql.DB, label, zone string) (Zone, error) {
 	return create(ctx, db, label, zone, true, nil)
 }
 
 // CreateWith adds a clock with explicit enabled and sort values. It returns
-// Errors for invalid, duplicate or clashing input, and ErrBoardFull when an
+// Errors for invalid, duplicate or clashing input, and ErrTooManyClocks when an
 // enabled clock is created while nine are already enabled.
 func CreateWith(ctx context.Context, db *sql.DB, v Values) (Zone, error) {
 	sort := v.Sort
@@ -291,8 +291,8 @@ func create(ctx context.Context, db *sql.DB, label, zone string, enabled bool, s
 			if err != nil {
 				return err
 			}
-			if n >= BoardSize {
-				return ErrBoardFull
+			if n >= MaxClocks {
+				return ErrTooManyClocks
 			}
 		}
 
@@ -340,7 +340,7 @@ func Update(ctx context.Context, db *sql.DB, id int64, label, zone string) (Zone
 }
 
 // UpdateWith changes every editable value of a clock. Enabling is refused with
-// ErrBoardFull when nine clocks are already enabled, and a sort value in use by
+// ErrTooManyClocks when nine clocks are already enabled, and a sort value in use by
 // another clock is refused with Errors.
 func UpdateWith(ctx context.Context, db *sql.DB, id int64, v Values) (Zone, error) {
 	enabled, sort := v.Enabled, v.Sort
@@ -376,8 +376,8 @@ func update(ctx context.Context, db *sql.DB, id int64, label, zone string, enabl
 			if err != nil {
 				return err
 			}
-			if n >= BoardSize {
-				return ErrBoardFull
+			if n >= MaxClocks {
+				return ErrTooManyClocks
 			}
 		}
 
@@ -409,7 +409,7 @@ func update(ctx context.Context, db *sql.DB, id int64, label, zone string, enabl
 }
 
 // Toggle flips a clock between enabled and disabled. Enabling is refused with
-// ErrBoardFull when nine clocks are already enabled.
+// ErrTooManyClocks when nine clocks are already enabled.
 func Toggle(ctx context.Context, db *sql.DB, id int64) error {
 	return withTx(ctx, db, func(tx *sql.Tx) error {
 		cur, err := get(ctx, tx, id)
@@ -427,8 +427,8 @@ func Toggle(ctx context.Context, db *sql.DB, id int64) error {
 		if err != nil {
 			return err
 		}
-		if enabled >= BoardSize {
-			return ErrBoardFull
+		if enabled >= MaxClocks {
+			return ErrTooManyClocks
 		}
 		if _, err := tx.ExecContext(ctx, `UPDATE timezones SET enabled = 1 WHERE id = ?`, id); err != nil {
 			return fmt.Errorf("enable clock: %w", err)

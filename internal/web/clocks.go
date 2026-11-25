@@ -14,8 +14,8 @@ import (
 // unknownTime is shown for a clock whose zone cannot be loaded.
 const unknownTime = "--:--"
 
-// boardView is the data for the board templates.
-type boardView struct {
+// clocksView is the data for the clocks page templates.
+type clocksView struct {
 	Title            string
 	RefreshSeconds   int
 	ColourBackground string
@@ -34,26 +34,26 @@ type clockView struct {
 	Time  string // HH:MM
 }
 
-// handleRootRedirect sends the root path to the board's canonical URL.
+// handleRootRedirect sends the root path to the clocks page's canonical URL.
 func (s *Server) handleRootRedirect(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/clocks", http.StatusFound)
 }
 
 // handleClocks serves the clocks page. A normal request gets the full page with
-// the board embedded; an HTMX poll gets just the board fragment, which it swaps
+// the clock grid embedded; an HTMX poll gets just the clock grid fragment, which it swaps
 // in place.
 func (s *Server) handleClocks(w http.ResponseWriter, r *http.Request) {
 	if isHTMX(r) {
-		s.render(w, r, "board")
+		s.render(w, r, "clocks")
 		return
 	}
 	s.render(w, r, "index.html")
 }
 
-// render builds the board data and executes the named template. The output
+// render builds the clocks page data and executes the named template. The output
 // is buffered, so a failure gives a clean 500 rather than a partial page.
 func (s *Server) render(w http.ResponseWriter, r *http.Request, name string) {
-	view, err := s.loadBoard(r.Context())
+	view, err := s.loadClocksPage(r.Context())
 	if err != nil {
 		log.Printf("%s: %v", r.URL.Path, err)
 		http.Error(w, "internal server error", http.StatusInternalServerError)
@@ -63,19 +63,19 @@ func (s *Server) render(w http.ResponseWriter, r *http.Request, name string) {
 	s.execute(w, r, name, view, http.StatusOK)
 }
 
-// loadBoard reads the settings and enabled clocks and formats each time for now.
-func (s *Server) loadBoard(ctx context.Context) (boardView, error) {
+// loadClocksPage reads the settings and enabled clocks and formats each time for now.
+func (s *Server) loadClocksPage(ctx context.Context) (clocksView, error) {
 	st, err := settings.Get(ctx, s.db)
 	if err != nil {
-		return boardView{}, err
+		return clocksView{}, err
 	}
 	zs, err := zones.ListEnabled(ctx, s.db)
 	if err != nil {
-		return boardView{}, err
+		return clocksView{}, err
 	}
 
 	now := s.now()
-	view := boardView{
+	view := clocksView{
 		Title:            st.Title,
 		RefreshSeconds:   st.RefreshSeconds,
 		ColourBackground: st.ColourBackground,

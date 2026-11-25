@@ -9,12 +9,12 @@ import (
 	"noticeboard/internal/zones"
 )
 
-// clocksView is the data for the clock list. The same data renders the
+// clockListView is the data for the clock list. The same data renders the
 // dashboard and the out-of-band refresh after each change.
-type clocksView struct {
+type clockListView struct {
 	Rows    []zoneRow
 	Enabled int // clocks currently enabled
-	Size    int // board size, for "N of 9 enabled"
+	Size    int // maximum clocks, for "N of 9 enabled"
 }
 
 // zoneRow is one line of the clock list. First and Last disable the Up and
@@ -35,7 +35,7 @@ type zoneFormView struct {
 	Label   string
 	Zone    string
 	Errors  zones.Errors // field messages, keyed by "label" or "zone"
-	Error   string       // a message for the whole form, such as a full board
+	Error   string       // a message for the whole form, such as the clock limit
 	Groups  []zoneGroup  // the time zone drop-down, set by executeZoneForm
 }
 
@@ -67,17 +67,17 @@ func clockAction(id int64, suffix string) string {
 }
 
 // loadClocks reads every clock and the enabled count.
-func (s *Server) loadClocks(r *http.Request) (clocksView, error) {
+func (s *Server) loadClocks(r *http.Request) (clockListView, error) {
 	ctx := r.Context()
 	all, err := zones.List(ctx, s.db)
 	if err != nil {
-		return clocksView{}, err
+		return clockListView{}, err
 	}
 	enabled, err := zones.CountEnabled(ctx, s.db)
 	if err != nil {
-		return clocksView{}, err
+		return clockListView{}, err
 	}
-	view := clocksView{Enabled: enabled, Size: zones.BoardSize, Rows: make([]zoneRow, len(all))}
+	view := clockListView{Enabled: enabled, Size: zones.MaxClocks, Rows: make([]zoneRow, len(all))}
 	for i, z := range all {
 		view.Rows[i] = zoneRow{
 			ID: z.ID, Label: z.Label, Zone: z.Zone, Enabled: z.Enabled,
@@ -203,14 +203,14 @@ func (s *Server) renderClockChange(w http.ResponseWriter, r *http.Request) {
 }
 
 // clockActionResult turns the outcome of a toggle, move or delete into a response.
-// ErrBoardFull is shown in the form region with 422. The list is left alone, because nothing changed.
+// ErrTooManyClocks is shown in the form region with 422. The list is left alone, because nothing changed.
 func (s *Server) clockActionResult(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case err == nil:
 		s.renderClockChange(w, r)
 	case errors.Is(err, zones.ErrNotFound):
 		http.NotFound(w, r)
-	case errors.Is(err, zones.ErrBoardFull):
+	case errors.Is(err, zones.ErrTooManyClocks):
 		s.execute(w, r, "form-message-oob", err.Error(), http.StatusUnprocessableEntity)
 	default:
 		s.serverError(w, r, err)
@@ -218,13 +218,13 @@ func (s *Server) clockActionResult(w http.ResponseWriter, r *http.Request, err e
 }
 
 // zoneFormFailure re-renders the clock form with the reason for a failed save. Field
-// errors and a full board both give 422 and keep the form in its own region.
+// errors and the clock limit both give 422 and keep the form in its own region.
 func (s *Server) zoneFormFailure(w http.ResponseWriter, r *http.Request, err error, v zoneFormView) {
 	var fieldErrs zones.Errors
 	switch {
 	case errors.As(err, &fieldErrs):
 		v.Errors = fieldErrs
-	case errors.Is(err, zones.ErrBoardFull):
+	case errors.Is(err, zones.ErrTooManyClocks):
 		v.Error = err.Error()
 	default:
 		s.serverError(w, r, err)

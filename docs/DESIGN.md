@@ -1,6 +1,6 @@
 # Noticeboard — Design
 
-Noticeboard is a web application that displays world clocks on a public board and lets an administrator manage the clocks and the board's appearance.
+Noticeboard is a web application that displays world clocks on a public clocks page and lets an administrator manage the clocks and the page's appearance.
 
 - **Language:** Go
 - **HTTP:** standard library `net/http` (no web framework)
@@ -22,9 +22,9 @@ Reference mock-up: [`docs/time-display.png`](time-display.png)
 - The UTC clock is shown in red; all other clocks are shown in green.
 - An administration dashboard, protected by login, for managing:
   - the clocks (add, edit, enable/disable, reorder, delete);
-  - the board settings (title, colours, refresh interval) and the table page size;
+  - the clock display settings (title, colours, refresh interval) and the table page size;
   - the `timezones` table through a paginated explorer with its raw columns, Edit and Delete per row, built on a generic table layer (section 5.3).
-- Run as a web server, or as a desktop-style app window with `serve --launch`; `open <address>` opens an already-running board without starting a server.
+- Run as a web server, or as a desktop-style app window with `serve --launch`; `open <address>` opens an already-running clocks page without starting a server.
 
 **Out of scope (for now)**
 
@@ -69,7 +69,7 @@ noticeboard/
 │   ├── auth/               # admin account, password hashing, sessions
 │   ├── auditlog/           # text audit log, capped at 1000 lines
 │   └── web/                # HTTP handlers and rendering
-│       ├── board.go        # GET /clocks (page or poll fragment), GET / (redirect)
+│       ├── clocks.go       # GET /clocks (page or poll fragment), GET / (redirect)
 │       ├── admin_auth.go   # login, logout, session middleware
 │       ├── admin_zones.go  # zone CRUD, toggle, move (dashboard clock list)
 │       ├── admin_table.go  # generic table pages: /admin/tables/{table}
@@ -98,11 +98,11 @@ noticeboard/
 - **Timeouts:** `http.Server` sets `ReadHeaderTimeout` to 10 seconds.
 - **Body size:** request bodies are limited to 64 KiB with `http.MaxBytesReader`.
 - **Response headers:** every response carries `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY` and `Content-Security-Policy: default-src 'self'; style-src 'self' 'unsafe-inline'`. The inline style is needed only for the CSS custom properties (section 6.2). No inline scripts are used.
-- **Clock:** the board shows the host's time. The host clock must be kept accurate, for example with NTP.
+- **Clock:** the clocks page shows the host's time. The host clock must be kept accurate, for example with NTP.
 
 ## 3. Data model
 
-SQLite tables, created by the embedded migrations (section 2.1). There is **no REST API**: all data is read and written by server-side handlers, so nothing is exposed to anonymous clients beyond the rendered board.
+SQLite tables, created by the embedded migrations (section 2.1). There is **no REST API**: all data is read and written by server-side handlers, so nothing is exposed to anonymous clients beyond the rendered clocks page.
 
 ### 3.1 `timezones`
 
@@ -116,8 +116,8 @@ One record per clock.
 | `enabled` | INTEGER | `0` or `1`, default `1` (`CHECK`)                                                                                                                                                                                                                                                                                                                                                                                                            |
 | `sort`    | INTEGER | required, unique; defines display order (ascending); new clocks take max + 1                                                                                                                                                                                                                                                                                                                                                                 |
 
-- Disabled clocks are hidden on the public board but remain in the admin list.
-- The board is a fixed 3×3 grid, so at most nine clocks may be enabled. Creating a clock, or enabling a disabled one, is refused when nine are already enabled. SQLite cannot express this rule, so the application enforces it. Disabled clocks have no limit.
+- Disabled clocks are hidden on the public clocks page but remain in the admin list.
+- The clocks page is a fixed 3×3 grid, so at most nine clocks may be enabled. Creating a clock, or enabling a disabled one, is refused when nine are already enabled. SQLite cannot express this rule, so the application enforces it. Disabled clocks have no limit.
 - Deleting a clock is a hard delete.
 - Moving a clock swaps `sort` with its neighbour (the adjacent clock in the list, enabled or disabled) in one transaction. A temporary value is needed because `sort` is unique. Moving the first clock up, or the last clock down, does nothing.
 
@@ -210,7 +210,7 @@ The mock-up is a single moment, not a specification. Zones are IANA IDs, so dayl
 
 ### 4.2 Login and session
 
-1. `GET /admin/login` renders the form (username and password) with a Cancel link beneath Log in that opens the board page `/clocks`. Like all admin forms, it is an HTMX form (see CSRF below).
+1. `GET /admin/login` renders the form (username and password) with a Cancel link beneath Log in that opens the clocks page `/clocks`. Like all admin forms, it is an HTMX form (see CSRF below).
 2. `POST /admin/login` normalises the username (section 4.1), looks up the admin and checks the password with `bcrypt.CompareHashAndPassword`. If the username does not match, the server still runs the comparison against a dummy bcrypt hash, so the response time does not reveal which usernames exist. A failure returns HTTP 422 with the message "Username or password is incorrect.", for both a wrong username and a wrong password. A username that contains white space cannot match, so it gets the same message.
 3. On success the server generates 32 random bytes (`crypto/rand`) and sends them base64url-encoded in a cookie named `noticeboard_session`. It stores the hex SHA-256 of the token in `sessions` with an expiry 12 hours ahead. The cookie has `HttpOnly`, `SameSite=Strict` and `Path=/admin`, and `Secure` when the request arrived over TLS (`r.TLS != nil`). The response carries `HX-Redirect: /admin`. Several sessions may be active at once.
 4. `POST /admin/logout` deletes the session row, expires the cookie (`MaxAge=-1`) and responds with `HX-Redirect: /admin/login`.
@@ -248,7 +248,7 @@ The application runs on a VPN, so the design relies on the network for protectio
 | Method | Path       | Purpose                                                               |
 | ------ | ---------- | --------------------------------------------------------------------- |
 | GET    | `/`        | Redirects to `/clocks`                                                |
-| GET    | `/clocks`  | Full page: HTML shell, styles, font, HTMX, `app.js`; embeds the board. An `HX-Request` poll gets just the board fragment |
+| GET    | `/clocks`  | Full page: HTML shell, styles, font, HTMX, `app.js`; embeds the clock grid. An `HX-Request` poll gets just the clock grid fragment |
 | GET    | `/static/` | Embedded CSS, JavaScript and font files                               |
 
 ### 5.2 Administration
@@ -299,15 +299,15 @@ The table pages are generic. `{table}` is a registered slug (`admintable.All`), 
 - **Sidebar menu:** both admin pages (`/admin` and `/admin/tables/{table}`) share a fixed vertical menu in a left sidebar, which does not scroll with the page: `Home` (`/clocks`), `Administration` (`/admin`), `Tables` (a heading, not a link) with the indented `timezones` link (`/admin/tables/timezones`) and `Log out` (the `POST /admin/logout` form). All items are bold dark grey and look the same; the current page's item also carries `aria-current="page"` for assistive technology.
 - **Adding a table:** an adapter in `internal/admintable` plus one line in `All`. No handler, route or template changes.
 
-## 6. Board display
+## 6. Clock display
 
 ### 6.1 Live updates
 
-The whole board is one wrapper element containing the title, the grid, and the polling attributes:
+The whole clock grid is one wrapper element containing the title, the grid, and the polling attributes:
 
 ```html
 <div
-  id="board"
+  id="clocks"
   hx-get="/clocks"
   hx-trigger="every {{.RefreshSeconds}}s"
   hx-swap="outerHTML"
@@ -335,7 +335,7 @@ Each poll replaces the entire wrapper. A change to the title, colours or refresh
 
 ### 6.4 Playwright-friendly markup
 
-- `data-testid="board"` on the wrapper.
+- `data-testid="clocks"` on the wrapper.
 - `data-testid="clock"` on each tile, with `data-zone="<IANA ID>"` and `data-utc="true|false"`.
 - `<time datetime="HH:MM">` around each value, so the time is machine-readable.
 - `data-testid="stale"` on the stale indicator (section 6.5).
@@ -343,9 +343,9 @@ Each poll replaces the entire wrapper. A change to the title, colours or refresh
 
 ### 6.5 Stale indicator
 
-- If a poll fails (an HTTP error status, or a network failure), HTMX keeps the last good board on screen.
-- `app.js` then shows a small "STALE" indicator in a fixed corner. The indicator sits outside `#board`, so the polling replacement does not remove it.
-- The indicator is hidden again after the next successful swap of `#board`.
+- If a poll fails (an HTTP error status, or a network failure), HTMX keeps the last good clocks display on screen.
+- `app.js` then shows a small "STALE" indicator in a fixed corner. The indicator sits outside `#clocks`, so the polling replacement does not remove it.
+- The indicator is hidden again after the next successful swap of `#clocks`.
 - `app.js` also sets `shouldSwap = true` for `htmx:beforeSwap` responses with status 422 or 404 whose `Content-Type` is `text/html`. That is the HTMX 2 pattern for validation fragments and for the table pages' stale-record fragment. Plain-text 404s, such as `http.NotFound`, are not swapped.
 
 ## 7. Font
@@ -359,11 +359,11 @@ Each poll replaces the entire wrapper. A change to the title, colours or refresh
 
 ## 8. Configuration
 
-The board is configured entirely from the admin dashboard. There are no environment variables or config files. The command-line options are:
+The clocks page is configured entirely from the admin dashboard. There are no environment variables or config files. The command-line options are:
 
 | Command / flag          | Default             | Purpose                                                                                           |
 | ----------------------- | ------------------- | ------------------------------------------------------------------------------------------------- |
-| `serve --addr`          | `127.0.0.1:8080`    | HTTP listen address. Set it to a VPN address to reach the board from other machines (section 4.3) |
+| `serve --addr`          | `127.0.0.1:8080`    | HTTP listen address. Set it to a VPN address to reach the clocks page from other machines (section 4.3) |
 | `serve --db`            | `./noticeboard.db`  | SQLite file; created and migrated on start                                                        |
 | `serve --log`           | `./noticeboard.log` | Audit log file (section 4.4)                                                                      |
 | `serve --launch`        | off                 | Open the board in an app-mode window (section 9)                                                  |
@@ -379,12 +379,12 @@ The board is configured entirely from the admin dashboard. There are no environm
 - A normal `serve` shutdown exits with status 0 (section 2.2).
 
 - **Clocks:** the `timezones` table.
-- **Board settings:** the `settings` singleton (section 3.2).
+- **Clock display settings:** the `settings` singleton (section 3.2).
 
 ## 9. Desktop mode
 
-- `noticeboard serve --launch` starts the HTTP server, and once it is listening, opens `/clocks` (the board) in a browser app-mode window.
-- `noticeboard open <address>` opens an already-running board at that address in a browser app-mode window. It does not start a server. The address is a host and port, or a full URL.
+- `noticeboard serve --launch` starts the HTTP server, and once it is listening, opens `/clocks` (the clocks page) in a browser app-mode window.
+- `noticeboard open <address>` opens an already-running clocks page at that address in a browser app-mode window. It does not start a server. The address is a host and port, or a full URL.
 - The launcher is adapted from `htmx-todos/gui.go`. It tries, in order, Edge or Chrome in app mode on Windows; Chrome, Chromium, Brave or `xdg-open` on Linux; and Chrome or `open` on macOS.
 - It requires no webview library. The launcher is plain Go, and the binary needs no CGO (section 2).
 
@@ -396,7 +396,7 @@ The board is configured entirely from the admin dashboard. There are no environm
 - If no browser is found, the URL is printed to stdout; `serve` keeps running. On Windows the search is for Edge or Chrome, on PATH or at their standard install locations, and there is no fallback to the default browser.
 - The window opens only after the server is listening. A listen failure other than an address already in use exits with status 1 and no window opens.
 - An address whose host is unspecified (`0.0.0.0` or `::`) is opened as `127.0.0.1`.
-- If the listen address is in use, `serve` exits with status 1 and no window opens, unless `--launch` is given. With `--launch`, a message is printed and the board is opened in a browser window, and the command exits with status 0. The address is assumed to be a running noticeboard. The command does not check this.
+- If the listen address is in use, `serve` exits with status 1 and no window opens, unless `--launch` is given. With `--launch`, a message is printed and the clocks page is opened in a browser window, and the command exits with status 0. The address is assumed to be a running noticeboard. The command does not check this.
 
 ## 10. Build, run and tasks
 
@@ -433,7 +433,7 @@ Per the project guidelines:
   - Login (including the generic 422), logout, the session middleware, and the HTMX `401` + `HX-Redirect` path.
   - Zone CRUD, toggle, move, the 404 and 400 cases, and 422 validation responses.
   - Table pages: page parsing, the page size setting, the full page and fragment (`Vary: HX-Request`), the raw columns and Edit/Delete buttons, the prefilled new-record form, create, update, delete, validation and refusal, search (filtering, totals, literal wildcards, filter kept in pager and record URLs, no-match message), stale-record 404s, unknown slug, middleware, auditing, and a test-only second adapter proving the layer is generic.
-  - Board rendering with the current settings, including the empty-board message.
+  - Clocks page rendering with the current settings, including the empty message.
 - **testify** is a test-only dependency, used only where it clearly simplifies an assertion.
 - **Functional tests** are not written in this phase. The markup in section 6.4 is designed so they can be added later with Playwright.
 
@@ -443,7 +443,7 @@ Per the project guidelines:
 2. **Database:** `internal/db` (open SQLite with the rollback journal, not WAL, apply migrations by `user_version`); `0001_init.sql` creating the four tables with `CHECK`, `UNIQUE` and `PRIMARY KEY` constraints, plus the settings and zone seeds.
 3. **`internal/clock`:** time formatting and colour-class logic, test-first.
 4. **`internal/settings`:** read, validate and update the singleton, with tests.
-5. **Board:** layout, board fragment for polls, polling wrapper, CSS variables, font embedding, `app.js` (422 swap and stale indicator), `httptest` rendering tests.
+5. **Clocks page:** layout, clock grid fragment for polls, polling wrapper, CSS variables, font embedding, `app.js` (422 swap and stale indicator), `httptest` rendering tests.
 6. **Admin authentication:** `admin init` command with bcrypt and username validation and normalisation; login against `admins` with the dummy-hash comparison; `sessions` rows and cookie handling; HTMX forms and `HX-Redirect`; middleware; logout; `HX-Request` check; login hint when no admin exists; `internal/auditlog` and request logging; tests against a temporary database.
 7. **Clock management:** `internal/zones` repository and validation; list, add, edit, enable/disable, move, delete with `hx-confirm`; uniqueness, the nine-enabled limit, and validation messages.
 8. **Settings UI:** form with colour pickers, number inputs and validation messages.
@@ -469,15 +469,15 @@ Per the project guidelines:
 | Deployment                  | VPN; plain HTTP; no TLS; no login throttling                                                                                                               |
 | Security headers            | `nosniff`, `X-Frame-Options: DENY`, CSP `default-src 'self'`; 64 KiB body limit; 10 s header timeout; graceful shutdown                                    |
 | Audit log                   | `noticeboard.log` (`serve --log`); logins and mutating admin requests; capped at 1000 lines                                                                |
-| Board size                  | Fixed 3×3 grid; at most nine enabled clocks; disabled clocks unlimited                                                                                     |
+| Clock limit                 | Fixed 3×3 grid; at most nine enabled clocks; disabled clocks unlimited                                                                                     |
 | Clock uniqueness            | Labels (trimmed) and zones are unique; zones `""` and `Local` rejected                                                                                     |
 | Clock ordering              | Manual, via the unique `sort` field and move buttons; moving past either end is a no-op                                                                    |
 | UTC clock                   | Exactly zone `UTC`; labels are not used                                                                                                                    |
-| Configurable board settings | Title, refresh interval, and four colours (background, label, clock, UTC); label text fixed white; title uses the label colour                             |
+| Configurable clock display  | Title, refresh interval, and four colours (background, label, clock, UTC); label text fixed white; title uses the label colour                             |
 | Colour format               | `#rrggbb`, case-insensitive on input, stored lowercase                                                                                                     |
-| Empty board                 | "No clocks are enabled."                                                                                                                                   |
-| Live updates                | HTMX polling of the whole board wrapper                                                                                                                    |
-| Poll errors                 | Last good board kept; "STALE" indicator outside `#board`, hidden on next successful swap                                                                   |
+| Empty clocks page           | "No clocks are enabled."                                                                                                                                   |
+| Live updates                | HTMX polling of the whole clock grid wrapper                                                                                                                    |
+| Poll errors                 | Last good clocks display kept; "STALE" indicator outside `#clocks`, hidden on next successful swap                                                                   |
 | Validation responses        | HTTP 422 with fragment; swap enabled in `app.js`                                                                                                           |
 | Admin responses             | Success returns the clock list (`#zones`) and an out-of-band empty form region                                                                             |
 | Admin table pages           | Generic `/admin/tables/{table}` routes over an `internal/admintable` adapter; unknown slug is 404 (section 5.3)                                              |

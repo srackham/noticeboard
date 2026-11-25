@@ -1,4 +1,4 @@
-// Package clock holds the pure time logic for the board: formatting a time
+// Package clock holds the pure time logic for the clocks page: formatting a time
 // for a zone and choosing a tile's colour class. It does no I/O.
 package clock
 

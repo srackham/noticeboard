@@ -51,8 +51,8 @@ func get(t *testing.T, h http.Handler, path string) *httptest.ResponseRecorder {
 	return rec
 }
 
-// getBoard fetches the board fragment the way HTMX polls it.
-func getBoard(t *testing.T, h http.Handler) *httptest.ResponseRecorder {
+// getClocksFragment fetches the clock grid fragment the way HTMX polls it.
+func getClocksFragment(t *testing.T, h http.Handler) *httptest.ResponseRecorder {
 	t.Helper()
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/clocks", nil)
@@ -81,9 +81,9 @@ func tiles(body string) []tile {
 	return out
 }
 
-func TestBoardShowsSeedClocksInOrder(t *testing.T) {
+func TestClocksShowsSeedClocksInOrder(t *testing.T) {
 	h, _ := newTestServer(t)
-	rec := getBoard(t, h)
+	rec := getClocksFragment(t, h)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200", rec.Code)
 	}
@@ -110,14 +110,14 @@ func TestBoardShowsSeedClocksInOrder(t *testing.T) {
 	}
 }
 
-func TestBoardWrapperAttributes(t *testing.T) {
+func TestClocksPageWrapperAttributes(t *testing.T) {
 	h, sqlDB := newTestServer(t)
 	exec(t, sqlDB, `UPDATE settings SET refresh_seconds = 12`)
-	body := getBoard(t, h).Body.String()
+	body := getClocksFragment(t, h).Body.String()
 
 	for _, want := range []string{
-		`id="board"`,
-		`data-testid="board"`,
+		`id="clocks"`,
+		`data-testid="clocks"`,
 		`hx-get="/clocks"`,
 		`hx-trigger="every 12s"`,
 		`hx-swap="outerHTML"`,
@@ -127,7 +127,7 @@ func TestBoardWrapperAttributes(t *testing.T) {
 		`--colour-utc:#b22222`,
 	} {
 		if !strings.Contains(body, want) {
-			t.Errorf("board missing %q\n%s", want, body)
+			t.Errorf("clocks fragment missing %q\n%s", want, body)
 		}
 	}
 	if strings.Contains(body, "<html") {
@@ -135,9 +135,9 @@ func TestBoardWrapperAttributes(t *testing.T) {
 	}
 }
 
-func TestBoardTilesMarkup(t *testing.T) {
+func TestClocksPageTilesMarkup(t *testing.T) {
 	h, _ := newTestServer(t)
-	body := getBoard(t, h).Body.String()
+	body := getClocksFragment(t, h).Body.String()
 
 	if n := strings.Count(body, `data-testid="clock"`); n != 9 {
 		t.Errorf("clock tiles = %d, want 9", n)
@@ -153,11 +153,11 @@ func TestBoardTilesMarkup(t *testing.T) {
 	}
 }
 
-func TestBoardHidesDisabledClocks(t *testing.T) {
+func TestClocksPageHidesDisabledClocks(t *testing.T) {
 	h, sqlDB := newTestServer(t)
 	exec(t, sqlDB, `UPDATE timezones SET enabled = 0 WHERE zone = 'Asia/Kolkata'`)
 
-	body := getBoard(t, h).Body.String()
+	body := getClocksFragment(t, h).Body.String()
 	if strings.Contains(body, "Asia/Kolkata") {
 		t.Error("disabled clock was rendered")
 	}
@@ -166,11 +166,11 @@ func TestBoardHidesDisabledClocks(t *testing.T) {
 	}
 }
 
-func TestBoardEmptyMessage(t *testing.T) {
+func TestClocksPageEmptyMessage(t *testing.T) {
 	h, sqlDB := newTestServer(t)
 	exec(t, sqlDB, `UPDATE timezones SET enabled = 0`)
 
-	body := getBoard(t, h).Body.String()
+	body := getClocksFragment(t, h).Body.String()
 	if !strings.Contains(body, "No clocks are enabled.") {
 		t.Errorf("empty message missing:\n%s", body)
 	}
@@ -179,26 +179,26 @@ func TestBoardEmptyMessage(t *testing.T) {
 	}
 }
 
-func TestBoardTitle(t *testing.T) {
+func TestClocksPageTitle(t *testing.T) {
 	h, sqlDB := newTestServer(t)
 
-	body := getBoard(t, h).Body.String()
+	body := getClocksFragment(t, h).Body.String()
 	if !strings.Contains(body, `<h1 class="title" data-testid="title">World Clocks</h1>`) {
 		t.Errorf("default title missing:\n%s", body)
 	}
 
 	exec(t, sqlDB, `UPDATE settings SET title = ''`)
-	body = getBoard(t, h).Body.String()
+	body = getClocksFragment(t, h).Body.String()
 	if strings.Contains(body, `data-testid="title"`) {
 		t.Error("blank title should hide the header")
 	}
 }
 
-func TestBoardEscapesLabelsAndZones(t *testing.T) {
+func TestClocksPageEscapesLabelsAndZones(t *testing.T) {
 	h, sqlDB := newTestServer(t)
 	exec(t, sqlDB, `UPDATE timezones SET label = '<script>x</script>' WHERE zone = 'UTC'`)
 
-	body := getBoard(t, h).Body.String()
+	body := getClocksFragment(t, h).Body.String()
 	if strings.Contains(body, "<script>x</script>") {
 		t.Error("label was not escaped")
 	}
@@ -207,21 +207,21 @@ func TestBoardEscapesLabelsAndZones(t *testing.T) {
 	}
 }
 
-func TestBoardInvalidZoneShowsPlaceholder(t *testing.T) {
+func TestClocksPageInvalidZoneShowsPlaceholder(t *testing.T) {
 	h, sqlDB := newTestServer(t)
 	exec(t, sqlDB, `UPDATE timezones SET zone = 'Not/AZone' WHERE zone = 'Europe/Kyiv'`)
 
-	got := tiles(getBoard(t, h).Body.String())
+	got := tiles(getClocksFragment(t, h).Body.String())
 	if last := got[len(got)-1]; last.time != "--:--" {
 		t.Errorf("invalid zone tile = %+v, want time --:--", last)
 	}
 }
 
-func TestBoardDatabaseErrorReturns500(t *testing.T) {
+func TestClocksPageDatabaseErrorReturns500(t *testing.T) {
 	h, sqlDB := newTestServer(t)
 	sqlDB.Close()
 
-	if rec := getBoard(t, h); rec.Code != http.StatusInternalServerError {
+	if rec := getClocksFragment(t, h); rec.Code != http.StatusInternalServerError {
 		t.Errorf("status = %d, want 500", rec.Code)
 	}
 }
@@ -239,7 +239,7 @@ func TestIndexIsFullPage(t *testing.T) {
 		`<link rel="stylesheet" href="/static/css/app.css">`,
 		`<script src="/static/js/htmx.min.js" defer></script>`,
 		`<script src="/static/js/app.js" defer></script>`,
-		`id="board"`,
+		`id="clocks"`,
 		`data-testid="stale"`,
 		`<a href="/admin" class="admin-link" data-testid="admin-link">ADMIN</a>`,
 	} {

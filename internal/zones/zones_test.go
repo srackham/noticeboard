@@ -138,8 +138,8 @@ func TestCreateRefusedWhenNineEnabled(t *testing.T) {
 	sqlDB := openTestDB(t)
 
 	_, err := Create(ctx, sqlDB, "Harbour", "Asia/Tokyo")
-	if !errors.Is(err, ErrBoardFull) {
-		t.Errorf("Create with nine enabled: error = %v, want ErrBoardFull", err)
+	if !errors.Is(err, ErrTooManyClocks) {
+		t.Errorf("Create with nine enabled: error = %v, want ErrTooManyClocks", err)
 	}
 	all, _ := List(ctx, sqlDB)
 	if len(all) != 9 {
@@ -189,8 +189,8 @@ func TestToggleEnableRefusedWhenNineEnabled(t *testing.T) {
 		t.Fatalf("Create: %v", err)
 	}
 
-	if err := Toggle(ctx, sqlDB, india); !errors.Is(err, ErrBoardFull) {
-		t.Errorf("enable at nine: error = %v, want ErrBoardFull", err)
+	if err := Toggle(ctx, sqlDB, india); !errors.Is(err, ErrTooManyClocks) {
+		t.Errorf("enable at nine: error = %v, want ErrTooManyClocks", err)
 	}
 	var enabled int
 	sqlDB.QueryRow(`SELECT enabled FROM timezones WHERE id = ?`, india).Scan(&enabled)
@@ -347,13 +347,13 @@ func TestCreateWithExplicitValues(t *testing.T) {
 
 	// An enabled clock is refused when nine are already enabled.
 	_, err = CreateWith(ctx, sqlDB, Values{Label: "Suva", Zone: "Pacific/Fiji", Enabled: true, Sort: 43})
-	if !errors.Is(err, ErrBoardFull) {
-		t.Errorf("tenth enabled clock = %v, want ErrBoardFull", err)
+	if !errors.Is(err, ErrTooManyClocks) {
+		t.Errorf("tenth enabled clock = %v, want ErrTooManyClocks", err)
 	}
 
-	// A disabled clock may be added even when the board is full.
+	// A disabled clock may be added even when the clock limit is reached.
 	if _, err := CreateWith(ctx, sqlDB, Values{Label: "Suva", Zone: "Pacific/Fiji", Enabled: false, Sort: 43}); err != nil {
-		t.Errorf("disabled clock with a full board: %v", err)
+		t.Errorf("disabled clock with the clock limit reached: %v", err)
 	}
 }
 
@@ -395,7 +395,7 @@ func TestUpdateWithExplicitValues(t *testing.T) {
 		}
 	}
 	_, err = UpdateWith(ctx, sqlDB, utc, Values{Label: "UTC", Zone: "UTC", Enabled: true, Sort: 1})
-	if !errors.Is(err, ErrBoardFull) {
-		t.Errorf("enabling a tenth clock = %v, want ErrBoardFull", err)
+	if !errors.Is(err, ErrTooManyClocks) {
+		t.Errorf("enabling a tenth clock = %v, want ErrTooManyClocks", err)
 	}
 }

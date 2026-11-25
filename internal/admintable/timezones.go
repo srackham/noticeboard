@@ -176,7 +176,7 @@ func mapError(err error) error {
 			out[field] = msg
 		}
 		return out
-	case errors.Is(err, zones.ErrBoardFull):
+	case errors.Is(err, zones.ErrTooManyClocks):
 		return Refused{Message: err.Error()}
 	case errors.Is(err, zones.ErrNotFound):
 		return ErrNotFound

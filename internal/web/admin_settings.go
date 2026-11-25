@@ -9,7 +9,7 @@ import (
 
 // dashboardView is the data for the dashboard: the clock list and the settings form.
 type dashboardView struct {
-	Clocks   clocksView
+	Clocks   clockListView
 	Settings settingsFormView
 }
 
@@ -71,7 +71,7 @@ func (s *Server) renderDashboard(w http.ResponseWriter, r *http.Request) {
 	s.execute(w, r, "admin-page", view, http.StatusOK)
 }
 
-// handleSettings saves the board settings. Invalid input gives 422 with the form
+// handleSettings saves the clock display settings. Invalid input gives 422 with the form
 // re-rendered, showing the messages and the values as typed. Valid input is saved,
 // and the form comes back with "Saved.".
 func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {

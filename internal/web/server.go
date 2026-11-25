@@ -15,7 +15,7 @@ import (
 	"noticeboard/internal/auditlog"
 )
 
-// Server serves the public board and the administration pages.
+// Server serves the public clocks page and the administration pages.
 type Server struct {
 	db        *sql.DB
 	templates *template.Template
@@ -51,8 +51,8 @@ func New(db *sql.DB, assets fs.FS, audit *auditlog.Logger) (*Server, error) {
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 
-	// Public site. The board's canonical URL is /clocks; the root redirects there.
-	// An HTMX poll of /clocks gets the board fragment instead of the full page.
+	// Public site. The clocks page's canonical URL is /clocks; the root redirects there.
+	// An HTMX poll of /clocks gets the clock grid fragment instead of the full page.
 	mux.HandleFunc("GET /{$}", s.handleRootRedirect)
 	mux.HandleFunc("GET /clocks", s.handleClocks)
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServerFS(s.static)))
@@ -73,7 +73,7 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("POST /admin/zones/{id}/move", s.requireSession(requireHTMX(http.HandlerFunc(s.handleZoneMove))))
 	mux.Handle("DELETE /admin/zones/{id}", s.requireSession(requireHTMX(http.HandlerFunc(s.handleZoneDelete))))
 
-	// Board settings.
+	// Clock display settings.
 	mux.Handle("POST /admin/settings", s.requireSession(requireHTMX(http.HandlerFunc(s.handleSettings))))
 
 	// Table pages. They are generic: {table} is a registered slug, and an

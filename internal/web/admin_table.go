@@ -55,7 +55,7 @@ type tableFormView struct {
 	Heading string
 	Action  string // the URL the form posts to
 	Fields  []tableFormField
-	Error   string // a message for the whole form, such as a full board
+	Error   string // a message for the whole form, such as the clock limit
 }
 
 // tableFormField is one input in the record form.

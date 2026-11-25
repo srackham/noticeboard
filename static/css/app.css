@@ -1,4 +1,4 @@
-/* Board styles. The colours come from custom properties set on #board
+/* Clocks page styles. The colours come from custom properties set on #clocks
    (DESIGN.md section 6.2). Sizes are approximate and are checked on the real
    display (section 7). */
 
@@ -17,7 +17,7 @@ body {
   overflow: hidden;
 }
 
-#board {
+#clocks {
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -92,7 +92,7 @@ body {
   font-size: 4vh;
 }
 
-/* Shown when a poll fails. It sits outside #board so that the swap does not remove it. */
+/* Shown when a poll fails. It sits outside #clocks so that the swap does not remove it. */
 .stale,
 .admin-link {
   position: fixed;
@@ -120,7 +120,7 @@ body {
   display: none;
 }
 
-/* Administration pages. These override the full-screen board layout above. */
+/* Administration pages. These override the full-screen clocks layout above. */
 html.admin,
 html.admin body {
   height: auto;

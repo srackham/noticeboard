@@ -3,15 +3,15 @@
 (function () {
   "use strict";
 
-  // isBoardRequest reports whether an HTMX event belongs to the board poll.
-  function isBoardRequest(detail) {
+  // isClocksRequest reports whether an HTMX event belongs to the clocks poll.
+  function isClocksRequest(detail) {
     if (!detail) {
       return false;
     }
     if (detail.requestConfig && detail.requestConfig.path === "/clocks") {
       return true;
     }
-    return Boolean(detail.elt && detail.elt.id === "board");
+    return Boolean(detail.elt && detail.elt.id === "clocks");
   }
 
   function setStale(on) {
@@ -37,21 +37,21 @@
     }
   });
 
-  // A failed poll keeps the last good board on screen and shows STALE.
+  // A failed poll keeps the last good clocks display on screen and shows STALE.
   document.body.addEventListener("htmx:responseError", function (evt) {
-    if (isBoardRequest(evt.detail)) {
+    if (isClocksRequest(evt.detail)) {
       setStale(true);
     }
   });
   document.body.addEventListener("htmx:sendError", function (evt) {
-    if (isBoardRequest(evt.detail)) {
+    if (isClocksRequest(evt.detail)) {
       setStale(true);
     }
   });
 
   // A successful poll swap clears the indicator.
   document.body.addEventListener("htmx:afterSwap", function (evt) {
-    if (isBoardRequest(evt.detail)) {
+    if (isClocksRequest(evt.detail)) {
       setStale(false);
     }
   });

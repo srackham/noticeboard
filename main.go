@@ -1,6 +1,6 @@
-// Command noticeboard serves world clocks on a public board and provides an
+// Command noticeboard serves world clocks on a public clocks page and provides an
 // administration dashboard for managing them. Its open command launches an
-// already-running board in a browser window.
+// already-running clocks page in a browser window.
 package main
 
 import (
@@ -146,7 +146,7 @@ func runServe(args []string, stdout, stderr io.Writer) int {
 	}
 
 	// With --launch the window opens only once the server is listening. If the
-	// address is already in use, the board is probably running there already, so
+	// address is already in use, the clocks page is probably running there already, so
 	// the window opens on it and the command exits with status 0.
 	var onListen func(url string)
 	if *launch {
@@ -155,7 +155,7 @@ func runServe(args []string, stdout, stderr io.Writer) int {
 	if err := serveHTTP(*addr, sqlDB, audit, stdout, onListen); err != nil {
 		if *launch && isAddrInUse(err) {
 			fmt.Fprintf(stdout, "noticeboard: %s is already in use: opening in browser window\n", *addr)
-			openWindow(boardURL(*addr), stdout, stderr)
+			openWindow(clocksURL(*addr), stdout, stderr)
 			return 0
 		}
 		fmt.Fprintf(stderr, "noticeboard: %v\n", err)
@@ -276,7 +276,7 @@ func promptPassword(stderr io.Writer, prompt string) (string, error) {
 // serveHTTP listens on addr and serves until SIGINT or SIGTERM, then shuts
 // down gracefully.
 //
-// onListen, when not nil, is called with the board URL once the server is
+// onListen, when not nil, is called with the clocks page URL once the server is
 // listening. Desktop mode uses it to open the window.
 func serveHTTP(addr string, sqlDB *sql.DB, audit *auditlog.Logger, stdout io.Writer, onListen func(url string)) error {
 	site, err := web.New(sqlDB, assetFS, audit)
@@ -299,7 +299,7 @@ func serveHTTP(addr string, sqlDB *sql.DB, audit *auditlog.Logger, stdout io.Wri
 	defer stop()
 
 	if onListen != nil {
-		onListen(boardURL(ln.Addr().String()))
+		onListen(clocksURL(ln.Addr().String()))
 	}
 
 	serveErr := make(chan error, 1)

@@ -1,7 +1,7 @@
 package main
 
 // Desktop mode (DESIGN.md section 9): serve --launch and open <address> open the
-// board in a browser app-mode window. The launcher is adapted from htmx-todos/gui.go.
+// clocks page in a browser app-mode window. The launcher is adapted from htmx-todos/gui.go.
 // It is plain Go, so the binary needs no webview library and no CGO.
 
 import (
@@ -119,18 +119,18 @@ func fileExists(path string) bool {
 }
 
 // openURL returns the browser URL for address. A full URL is used as is; a
-// listen address such as "127.0.0.1:8080" is converted with boardURL.
+// listen address such as "127.0.0.1:8080" is converted with clocksURL.
 func openURL(address string) string {
 	if strings.Contains(address, "://") {
 		return address
 	}
-	return boardURL(address)
+	return clocksURL(address)
 }
 
-// boardURL returns the address of the board for a listen address such as
+// clocksURL returns the address of the clocks page for a listen address such as
 // "127.0.0.1:8080" or ":8080". An empty or unspecified host (0.0.0.0 or ::) is
 // opened as the loopback address, because Windows browsers cannot open 0.0.0.0.
-func boardURL(hostPort string) string {
+func clocksURL(hostPort string) string {
 	host, port, err := net.SplitHostPort(hostPort)
 	if err != nil {
 		return "http://" + hostPort + "/clocks"

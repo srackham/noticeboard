@@ -1,6 +1,6 @@
-{{define "board"}}
-<div id="board" hx-get="/clocks" hx-trigger="every {{.RefreshSeconds}}s" hx-swap="outerHTML"
-     data-testid="board"
+{{define "clocks"}}
+<div id="clocks" hx-get="/clocks" hx-trigger="every {{.RefreshSeconds}}s" hx-swap="outerHTML"
+     data-testid="clocks"
      style="--colour-background:{{.ColourBackground}}; --colour-label:{{.ColourLabel}}; --colour-clock:{{.ColourClock}}; --colour-utc:{{.ColourUTC}}">
   {{with .Title}}<h1 class="title" data-testid="title">{{.}}</h1>{{end}}
   <div class="grid">

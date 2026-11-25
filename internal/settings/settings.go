@@ -1,4 +1,4 @@
-// Package settings reads, validates and updates the board settings, the single
+// Package settings reads, validates and updates the clock display settings, the single
 // row of the settings table (DESIGN.md section 3.2).
 package settings
 
@@ -22,7 +22,7 @@ const (
 	MaxTablePageSize = 100
 )
 
-// Settings is the board and administration configuration. Colours are "#rrggbb".
+// Settings is the clock display and administration configuration. Colours are "#rrggbb".
 type Settings struct {
 	Title            string
 	RefreshSeconds   int

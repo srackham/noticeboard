@@ -115,7 +115,7 @@ func TestNewClockForm(t *testing.T) {
 func TestCreateClock(t *testing.T) {
 	h, sqlDB := newTestServer(t)
 	c := adminSession(t, h, sqlDB)
-	// Free a place on the full board first.
+	// Free a clock slot first.
 	serve(h, adminRequest(http.MethodPost, "/admin/zones/"+clockID(t, sqlDB, "Europe/Kyiv")+"/toggle", nil, c))
 
 	rec := serve(h, adminRequest(http.MethodPost, "/admin/zones",

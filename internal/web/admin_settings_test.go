@@ -80,9 +80,9 @@ func TestSaveSettingsStoresAndShowsSaved(t *testing.T) {
 		t.Errorf("stored = %q, %d, %q; want Harbour, 10, #ffffff (lowercase)", title, refresh, bg)
 	}
 
-	// The board reads the same row, so the new title appears on the next poll.
-	if board := serve(h, httptest.NewRequest(http.MethodGet, "/clocks", nil)).Body.String(); !strings.Contains(board, "Harbour") {
-		t.Error("board does not show the saved title")
+	// The clocks page reads the same row, so the new title appears on the next poll.
+	if body := serve(h, httptest.NewRequest(http.MethodGet, "/clocks", nil)).Body.String(); !strings.Contains(body, "Harbour") {
+		t.Error("clocks page does not show the saved title")
 	}
 }
 
@@ -146,7 +146,7 @@ func TestRejectedSettingsKeepTypedValues(t *testing.T) {
 	}
 }
 
-func TestBlankTitleHidesBoardHeader(t *testing.T) {
+func TestBlankTitleHidesClockTitle(t *testing.T) {
 	h, sqlDB := newTestServer(t)
 	c := adminSession(t, h, sqlDB)
 	form := validSettingsForm()
@@ -155,7 +155,7 @@ func TestBlankTitleHidesBoardHeader(t *testing.T) {
 	if rec := serve(h, adminRequest(http.MethodPost, "/admin/settings", form, c)); rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200", rec.Code)
 	}
-	if board := serve(h, httptest.NewRequest(http.MethodGet, "/clocks", nil)).Body.String(); strings.Contains(board, `data-testid="title"`) {
+	if body := serve(h, httptest.NewRequest(http.MethodGet, "/clocks", nil)).Body.String(); strings.Contains(body, `data-testid="title"`) {
 		t.Error("blank title should hide the header")
 	}
 }
