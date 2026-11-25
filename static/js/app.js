@@ -8,7 +8,7 @@
     if (!detail) {
       return false;
     }
-    if (detail.requestConfig && detail.requestConfig.path === "/board") {
+    if (detail.requestConfig && detail.requestConfig.path === "/clocks") {
       return true;
     }
     return Boolean(detail.elt && detail.elt.id === "board");

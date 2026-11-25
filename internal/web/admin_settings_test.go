@@ -81,7 +81,7 @@ func TestSaveSettingsStoresAndShowsSaved(t *testing.T) {
 	}
 
 	// The board reads the same row, so the new title appears on the next poll.
-	if board := serve(h, httptest.NewRequest(http.MethodGet, "/board", nil)).Body.String(); !strings.Contains(board, "Harbour") {
+	if board := serve(h, httptest.NewRequest(http.MethodGet, "/clocks", nil)).Body.String(); !strings.Contains(board, "Harbour") {
 		t.Error("board does not show the saved title")
 	}
 }
@@ -155,7 +155,7 @@ func TestBlankTitleHidesBoardHeader(t *testing.T) {
 	if rec := serve(h, adminRequest(http.MethodPost, "/admin/settings", form, c)); rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200", rec.Code)
 	}
-	if board := serve(h, httptest.NewRequest(http.MethodGet, "/board", nil)).Body.String(); strings.Contains(board, `data-testid="title"`) {
+	if board := serve(h, httptest.NewRequest(http.MethodGet, "/clocks", nil)).Body.String(); strings.Contains(board, `data-testid="title"`) {
 		t.Error("blank title should hide the header")
 	}
 }

@@ -69,7 +69,7 @@ noticeboard/
 │   ├── auth/               # admin account, password hashing, sessions
 │   ├── auditlog/           # text audit log, capped at 1000 lines
 │   └── web/                # HTTP handlers and rendering
-│       ├── board.go        # GET /clocks, GET /board, GET / (redirect)
+│       ├── board.go        # GET /clocks (page or poll fragment), GET / (redirect)
 │       ├── admin_auth.go   # login, logout, session middleware
 │       ├── admin_zones.go  # zone CRUD, toggle, move (dashboard clock list)
 │       ├── admin_table.go  # generic table pages: /admin/tables/{table}
@@ -248,8 +248,7 @@ The application runs on a VPN, so the design relies on the network for protectio
 | Method | Path       | Purpose                                                               |
 | ------ | ---------- | --------------------------------------------------------------------- |
 | GET    | `/`        | Redirects to `/clocks`                                                |
-| GET    | `/clocks`  | Full page: HTML shell, styles, font, HTMX, `app.js`; embeds the board |
-| GET    | `/board`   | Board fragment: title, grid of clocks, polling attributes             |
+| GET    | `/clocks`  | Full page: HTML shell, styles, font, HTMX, `app.js`; embeds the board. An `HX-Request` poll gets just the board fragment |
 | GET    | `/static/` | Embedded CSS, JavaScript and font files                               |
 
 ### 5.2 Administration
@@ -309,7 +308,7 @@ The whole board is one wrapper element containing the title, the grid, and the p
 ```html
 <div
   id="board"
-  hx-get="/board"
+  hx-get="/clocks"
   hx-trigger="every {{.RefreshSeconds}}s"
   hx-swap="outerHTML"
 >
@@ -444,7 +443,7 @@ Per the project guidelines:
 2. **Database:** `internal/db` (open SQLite with the rollback journal, not WAL, apply migrations by `user_version`); `0001_init.sql` creating the four tables with `CHECK`, `UNIQUE` and `PRIMARY KEY` constraints, plus the settings and zone seeds.
 3. **`internal/clock`:** time formatting and colour-class logic, test-first.
 4. **`internal/settings`:** read, validate and update the singleton, with tests.
-5. **Board:** layout, `/board` fragment, polling wrapper, CSS variables, font embedding, `app.js` (422 swap and stale indicator), `httptest` rendering tests.
+5. **Board:** layout, board fragment for polls, polling wrapper, CSS variables, font embedding, `app.js` (422 swap and stale indicator), `httptest` rendering tests.
 6. **Admin authentication:** `admin init` command with bcrypt and username validation and normalisation; login against `admins` with the dummy-hash comparison; `sessions` rows and cookie handling; HTMX forms and `HX-Redirect`; middleware; logout; `HX-Request` check; login hint when no admin exists; `internal/auditlog` and request logging; tests against a temporary database.
 7. **Clock management:** `internal/zones` repository and validation; list, add, edit, enable/disable, move, delete with `hx-confirm`; uniqueness, the nine-enabled limit, and validation messages.
 8. **Settings UI:** form with colour pickers, number inputs and validation messages.

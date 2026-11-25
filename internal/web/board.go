@@ -39,14 +39,15 @@ func (s *Server) handleRootRedirect(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/clocks", http.StatusFound)
 }
 
-// handleIndex serves the full page with the board embedded.
-func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
+// handleClocks serves the clocks page. A normal request gets the full page with
+// the board embedded; an HTMX poll gets just the board fragment, which it swaps
+// in place.
+func (s *Server) handleClocks(w http.ResponseWriter, r *http.Request) {
+	if isHTMX(r) {
+		s.render(w, r, "board")
+		return
+	}
 	s.render(w, r, "index.html")
-}
-
-// handleBoard serves the board fragment that HTMX polls.
-func (s *Server) handleBoard(w http.ResponseWriter, r *http.Request) {
-	s.render(w, r, "board")
 }
 
 // render builds the board data and executes the named template. The output

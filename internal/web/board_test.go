@@ -51,6 +51,16 @@ func get(t *testing.T, h http.Handler, path string) *httptest.ResponseRecorder {
 	return rec
 }
 
+// getBoard fetches the board fragment the way HTMX polls it.
+func getBoard(t *testing.T, h http.Handler) *httptest.ResponseRecorder {
+	t.Helper()
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/clocks", nil)
+	req.Header.Set("HX-Request", "true")
+	h.ServeHTTP(rec, req)
+	return rec
+}
+
 func exec(t *testing.T, sqlDB *sql.DB, query string) {
 	t.Helper()
 	if _, err := sqlDB.Exec(query); err != nil {
@@ -73,7 +83,7 @@ func tiles(body string) []tile {
 
 func TestBoardShowsSeedClocksInOrder(t *testing.T) {
 	h, _ := newTestServer(t)
-	rec := get(t, h, "/board")
+	rec := getBoard(t, h)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200", rec.Code)
 	}
@@ -103,12 +113,12 @@ func TestBoardShowsSeedClocksInOrder(t *testing.T) {
 func TestBoardWrapperAttributes(t *testing.T) {
 	h, sqlDB := newTestServer(t)
 	exec(t, sqlDB, `UPDATE settings SET refresh_seconds = 12`)
-	body := get(t, h, "/board").Body.String()
+	body := getBoard(t, h).Body.String()
 
 	for _, want := range []string{
 		`id="board"`,
 		`data-testid="board"`,
-		`hx-get="/board"`,
+		`hx-get="/clocks"`,
 		`hx-trigger="every 12s"`,
 		`hx-swap="outerHTML"`,
 		`--colour-background:#d9d9d9`,
@@ -121,13 +131,13 @@ func TestBoardWrapperAttributes(t *testing.T) {
 		}
 	}
 	if strings.Contains(body, "<html") {
-		t.Error("/board must return the fragment, not the full page")
+		t.Error("the poll must return the fragment, not the full page")
 	}
 }
 
 func TestBoardTilesMarkup(t *testing.T) {
 	h, _ := newTestServer(t)
-	body := get(t, h, "/board").Body.String()
+	body := getBoard(t, h).Body.String()
 
 	if n := strings.Count(body, `data-testid="clock"`); n != 9 {
 		t.Errorf("clock tiles = %d, want 9", n)
@@ -147,7 +157,7 @@ func TestBoardHidesDisabledClocks(t *testing.T) {
 	h, sqlDB := newTestServer(t)
 	exec(t, sqlDB, `UPDATE timezones SET enabled = 0 WHERE zone = 'Asia/Kolkata'`)
 
-	body := get(t, h, "/board").Body.String()
+	body := getBoard(t, h).Body.String()
 	if strings.Contains(body, "Asia/Kolkata") {
 		t.Error("disabled clock was rendered")
 	}
@@ -160,7 +170,7 @@ func TestBoardEmptyMessage(t *testing.T) {
 	h, sqlDB := newTestServer(t)
 	exec(t, sqlDB, `UPDATE timezones SET enabled = 0`)
 
-	body := get(t, h, "/board").Body.String()
+	body := getBoard(t, h).Body.String()
 	if !strings.Contains(body, "No clocks are enabled.") {
 		t.Errorf("empty message missing:\n%s", body)
 	}
@@ -172,13 +182,13 @@ func TestBoardEmptyMessage(t *testing.T) {
 func TestBoardTitle(t *testing.T) {
 	h, sqlDB := newTestServer(t)
 
-	body := get(t, h, "/board").Body.String()
+	body := getBoard(t, h).Body.String()
 	if !strings.Contains(body, `<h1 class="title" data-testid="title">World Clocks</h1>`) {
 		t.Errorf("default title missing:\n%s", body)
 	}
 
 	exec(t, sqlDB, `UPDATE settings SET title = ''`)
-	body = get(t, h, "/board").Body.String()
+	body = getBoard(t, h).Body.String()
 	if strings.Contains(body, `data-testid="title"`) {
 		t.Error("blank title should hide the header")
 	}
@@ -188,7 +198,7 @@ func TestBoardEscapesLabelsAndZones(t *testing.T) {
 	h, sqlDB := newTestServer(t)
 	exec(t, sqlDB, `UPDATE timezones SET label = '<script>x</script>' WHERE zone = 'UTC'`)
 
-	body := get(t, h, "/board").Body.String()
+	body := getBoard(t, h).Body.String()
 	if strings.Contains(body, "<script>x</script>") {
 		t.Error("label was not escaped")
 	}
@@ -201,7 +211,7 @@ func TestBoardInvalidZoneShowsPlaceholder(t *testing.T) {
 	h, sqlDB := newTestServer(t)
 	exec(t, sqlDB, `UPDATE timezones SET zone = 'Not/AZone' WHERE zone = 'Europe/Kyiv'`)
 
-	got := tiles(get(t, h, "/board").Body.String())
+	got := tiles(getBoard(t, h).Body.String())
 	if last := got[len(got)-1]; last.time != "--:--" {
 		t.Errorf("invalid zone tile = %+v, want time --:--", last)
 	}
@@ -211,7 +221,7 @@ func TestBoardDatabaseErrorReturns500(t *testing.T) {
 	h, sqlDB := newTestServer(t)
 	sqlDB.Close()
 
-	if rec := get(t, h, "/board"); rec.Code != http.StatusInternalServerError {
+	if rec := getBoard(t, h); rec.Code != http.StatusInternalServerError {
 		t.Errorf("status = %d, want 500", rec.Code)
 	}
 }

@@ -52,9 +52,9 @@ func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 
 	// Public site. The board's canonical URL is /clocks; the root redirects there.
+	// An HTMX poll of /clocks gets the board fragment instead of the full page.
 	mux.HandleFunc("GET /{$}", s.handleRootRedirect)
-	mux.HandleFunc("GET /clocks", s.handleIndex)
-	mux.HandleFunc("GET /board", s.handleBoard)
+	mux.HandleFunc("GET /clocks", s.handleClocks)
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServerFS(s.static)))
 
 	// Administration. The login page and its POST are public. Logout and the

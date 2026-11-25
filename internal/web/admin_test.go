@@ -342,7 +342,7 @@ func TestUnknownAdminPathNeedsSession(t *testing.T) {
 
 func TestSecurityHeaders(t *testing.T) {
 	h, _ := newTestServer(t)
-	for _, path := range []string{"/", "/board", "/admin/login"} {
+	for _, path := range []string{"/", "/clocks", "/admin/login"} {
 		rec := serve(h, httptest.NewRequest(http.MethodGet, path, nil))
 		if got := rec.Header().Get("X-Content-Type-Options"); got != "nosniff" {
 			t.Errorf("%s: X-Content-Type-Options = %q", path, got)
