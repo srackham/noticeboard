@@ -135,10 +135,6 @@ func runServe(args []string, stdout, stderr io.Writer) int {
 	}
 	defer sqlDB.Close()
 
-	if err := auth.DeleteExpiredSessions(context.Background(), sqlDB, time.Now()); err != nil {
-		fmt.Fprintf(stderr, "noticeboard: %v\n", err)
-		return 1
-	}
 	audit, err := auditlog.Open(*logPath)
 	if err != nil {
 		fmt.Fprintf(stderr, "noticeboard: %v\n", err)
@@ -291,6 +287,14 @@ func serveHTTP(addr string, sqlDB *sql.DB, audit *auditlog.Logger, stdout io.Wri
 
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
+		return err
+	}
+	// Starting the server ends any admin session left over from a previous run, so
+	// the administrator must log in again. This happens only after the listen
+	// succeeds: the --launch fallback opens an already-running server instead of
+	// starting one, and must not log that server's administrator out.
+	if err := auth.DeleteAllSessions(context.Background(), sqlDB); err != nil {
+		ln.Close()
 		return err
 	}
 	fmt.Fprintf(stdout, "noticeboard: listening on http://%s\n", ln.Addr())

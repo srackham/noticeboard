@@ -70,6 +70,15 @@ func DeleteSession(ctx context.Context, db *sql.DB, token string) error {
 	return nil
 }
 
+// DeleteAllSessions ends every session. The server calls it when it starts, so a
+// login from a previous run does not survive a restart.
+func DeleteAllSessions(ctx context.Context, db *sql.DB) error {
+	if _, err := db.ExecContext(ctx, `DELETE FROM sessions`); err != nil {
+		return fmt.Errorf("delete sessions: %w", err)
+	}
+	return nil
+}
+
 // DeleteExpiredSessions removes sessions that have expired at now.
 func DeleteExpiredSessions(ctx context.Context, db *sql.DB, now time.Time) error {
 	if _, err := db.ExecContext(ctx, `DELETE FROM sessions WHERE expires_at <= ?`, now.Unix()); err != nil {

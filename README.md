@@ -136,4 +136,4 @@ For another platform, set `GOOS` and `GOARCH`, for example `GOOS=windows GOARCH=
 
 ## Security
 
-The server uses plain HTTP only. It has no TLS and no login throttling. Run it on a trusted network, such as a VPN, and keep the listen address off public interfaces.
+The server uses plain HTTP only. It has no TLS and no login throttling. Admin sessions do not survive a restart: starting the server logs out any administrator who was signed in, so they must log in again. Run it on a trusted network, such as a VPN, and keep the listen address off public interfaces.
