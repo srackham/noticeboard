@@ -365,12 +365,6 @@ button:disabled {
   grid-column: 1 / -1;
 }
 
-.notice {
-  margin: 0;
-  font-weight: 700;
-  color: #2e7d32;
-}
-
 /* Fixed vertical admin menu on the left. It does not scroll with the page. */
 .admin-sidebar {
   position: fixed;

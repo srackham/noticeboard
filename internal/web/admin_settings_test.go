@@ -59,7 +59,7 @@ func TestDashboardShowsSettingsForm(t *testing.T) {
 	}
 }
 
-func TestSaveSettingsStoresAndShowsSaved(t *testing.T) {
+func TestSaveSettingsStoresValues(t *testing.T) {
 	h, sqlDB := newTestServer(t)
 	c := adminSession(t, h, sqlDB)
 
@@ -67,11 +67,7 @@ func TestSaveSettingsStoresAndShowsSaved(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200:\n%s", rec.Code, rec.Body.String())
 	}
-	body := rec.Body.String()
-	if !strings.Contains(body, `data-testid="settings-saved"`) || !strings.Contains(body, "Saved.") {
-		t.Errorf("saved message missing:\n%s", body)
-	}
-	if !strings.Contains(body, `id="settings-form"`) {
+	if body := rec.Body.String(); !strings.Contains(body, `id="settings-form"`) {
 		t.Error("response should return the settings form")
 	}
 
@@ -124,9 +120,6 @@ func TestSaveSettingsRejectsInvalidInput(t *testing.T) {
 			}
 			if !strings.Contains(body, `id="settings-form"`) {
 				t.Error("422 should re-render the settings form")
-			}
-			if strings.Contains(body, "Saved.") {
-				t.Error("rejected input reported as saved")
 			}
 
 			var title string

@@ -26,11 +26,10 @@ type settingsFormView struct {
 	TablePageSize    string
 	LoginTimeout     string
 	Errors           settings.Errors // field messages, keyed by form field name
-	Notice           string          // a confirmation, such as "Saved."
 }
 
 // newSettingsView builds the form data from the typed values.
-func newSettingsView(in settings.Input, errs settings.Errors, notice string) settingsFormView {
+func newSettingsView(in settings.Input, errs settings.Errors) settingsFormView {
 	return settingsFormView{
 		Title:            in.Title,
 		RefreshSeconds:   in.RefreshSeconds,
@@ -41,7 +40,6 @@ func newSettingsView(in settings.Input, errs settings.Errors, notice string) set
 		TablePageSize:    in.TablePageSize,
 		LoginTimeout:     in.LoginTimeout,
 		Errors:           errs,
-		Notice:           notice,
 	}
 }
 
@@ -73,7 +71,7 @@ func (s *Server) renderDashboard(w http.ResponseWriter, r *http.Request) {
 	}
 	view := dashboardView{
 		Clocks:      clocks,
-		Settings:    newSettingsView(inputFrom(st), nil, ""),
+		Settings:    newSettingsView(inputFrom(st), nil),
 		IdleTimeout: st.LoginTimeoutSeconds(),
 	}
 	s.execute(w, r, "admin-page", view, http.StatusOK)
@@ -81,7 +79,7 @@ func (s *Server) renderDashboard(w http.ResponseWriter, r *http.Request) {
 
 // handleSettings saves the clock display settings. Invalid input gives 422 with the form
 // re-rendered, showing the messages and the values as typed. Valid input is saved,
-// and the form comes back with "Saved.".
+// and the form comes back with the stored values.
 func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		formError(w, err)
@@ -100,7 +98,7 @@ func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
 
 	clean, errs := settings.ParseInput(in)
 	if len(errs) > 0 {
-		s.execute(w, r, "settings-form", newSettingsView(in, errs, ""), http.StatusUnprocessableEntity)
+		s.execute(w, r, "settings-form", newSettingsView(in, errs), http.StatusUnprocessableEntity)
 		return
 	}
 	stored, err := settings.Update(r.Context(), s.db, clean)
@@ -108,5 +106,5 @@ func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
 		s.serverError(w, r, err)
 		return
 	}
-	s.execute(w, r, "settings-form", newSettingsView(inputFrom(stored), nil, "Saved."), http.StatusOK)
+	s.execute(w, r, "settings-form", newSettingsView(inputFrom(stored), nil), http.StatusOK)
 }

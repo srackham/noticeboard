@@ -128,8 +128,6 @@
 {{define "settings-form"}}
 <form id="settings-form" class="settings-form" data-testid="settings-form"
       hx-post="/admin/settings" hx-target="this" hx-swap="outerHTML">
-  {{with .Notice}}<p class="notice" role="status" data-testid="settings-saved">{{.}}</p>{{end}}
-
   <fieldset class="settings-group">
     <legend>General</legend>
     <div class="field">
