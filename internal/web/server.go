@@ -47,6 +47,12 @@ func New(db *sql.DB, assets fs.FS, audit *auditlog.Logger) (*Server, error) {
 	}, nil
 }
 
+// handleFavicon answers the browser's automatic favicon request. The app has no
+// icon, so the response is an empty 204 rather than a 404 error.
+func (s *Server) handleFavicon(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // Handler returns the routes, wrapped in the middleware that applies to all of them.
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
@@ -55,6 +61,7 @@ func (s *Server) Handler() http.Handler {
 	// An HTMX poll of /clocks gets the clock grid fragment instead of the full page.
 	mux.HandleFunc("GET /{$}", s.handleRootRedirect)
 	mux.HandleFunc("GET /clocks", s.handleClocks)
+	mux.HandleFunc("GET /favicon.ico", s.handleFavicon)
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServerFS(s.static)))
 
 	// Administration. The login page and its POST are public. Logout and the

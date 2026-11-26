@@ -251,6 +251,7 @@ The application runs on a VPN, so the design relies on the network for protectio
 | ------ | ---------- | --------------------------------------------------------------------- |
 | GET    | `/`        | Redirects to `/clocks`                                                |
 | GET    | `/clocks`  | Full page: HTML shell, styles, font, HTMX, `app.js`; embeds the clock grid. An `HX-Request` poll gets just the clock grid fragment |
+| GET    | `/favicon.ico` | Empty `204 No Content`, so the browser's automatic icon request is not an error |
 | GET    | `/static/` | Embedded CSS, JavaScript and font files                               |
 
 ### 5.2 Administration
