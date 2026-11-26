@@ -16,6 +16,7 @@ func validInput() Input {
 		ColourClock:      "#000000",
 		ColourUTC:        "#ffffff",
 		TablePageSize:    " 25 ",
+		LoginTimeout:     " 15 ",
 	}
 }
 
@@ -29,6 +30,9 @@ func TestParseInputAcceptsAndNormalises(t *testing.T) {
 	}
 	if s.TablePageSize != 25 {
 		t.Errorf("TablePageSize = %d, want 25", s.TablePageSize)
+	}
+	if s.LoginTimeout != 15 {
+		t.Errorf("LoginTimeout = %v, want 15", s.LoginTimeout)
 	}
 }
 
@@ -52,6 +56,10 @@ func TestParseInputReportsField(t *testing.T) {
 		{name: "page size not a number", mutate: func(in *Input) { in.TablePageSize = "many" }, wantField: FieldTablePageSize},
 		{name: "page size too small", mutate: func(in *Input) { in.TablePageSize = strconv.Itoa(MinTablePageSize - 1) }, wantField: FieldTablePageSize},
 		{name: "page size too large", mutate: func(in *Input) { in.TablePageSize = strconv.Itoa(MaxTablePageSize + 1) }, wantField: FieldTablePageSize},
+		{name: "login timeout empty", mutate: func(in *Input) { in.LoginTimeout = "" }, wantField: FieldLoginTimeout},
+		{name: "login timeout not a number", mutate: func(in *Input) { in.LoginTimeout = "soon" }, wantField: FieldLoginTimeout},
+		{name: "login timeout too small", mutate: func(in *Input) { in.LoginTimeout = "0.1" }, wantField: FieldLoginTimeout},
+		{name: "login timeout too large", mutate: func(in *Input) { in.LoginTimeout = "1441" }, wantField: FieldLoginTimeout},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -76,6 +84,22 @@ func TestParseInputAcceptsPageSizeBounds(t *testing.T) {
 		if _, errs := ParseInput(form); len(errs) != 0 {
 			t.Errorf("TablePageSize %q: unexpected errors: %v", in, errs)
 		}
+	}
+}
+
+// TestParseInputAcceptsFractionalLoginTimeout checks that minutes may have a fraction.
+func TestParseInputAcceptsFractionalLoginTimeout(t *testing.T) {
+	form := validInput()
+	form.LoginTimeout = "1.5"
+	s, errs := ParseInput(form)
+	if len(errs) != 0 {
+		t.Fatalf("unexpected errors: %v", errs)
+	}
+	if s.LoginTimeout != 1.5 {
+		t.Errorf("LoginTimeout = %v, want 1.5", s.LoginTimeout)
+	}
+	if got := s.LoginTimeoutSeconds(); got != 90 {
+		t.Errorf("LoginTimeoutSeconds = %d, want 90", got)
 	}
 }
 

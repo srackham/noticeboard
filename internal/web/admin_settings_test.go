@@ -19,6 +19,7 @@ func validSettingsForm() url.Values {
 		"colour_clock":      {"#228b22"},
 		"colour_utc":        {"#b22222"},
 		"table_page_size":   {"20"},
+		"login_timeout":     {"15"},
 	}
 }
 
@@ -42,6 +43,10 @@ func TestDashboardShowsSettingsForm(t *testing.T) {
 		`name="colour_clock" type="color" value="#228b22"`,
 		`name="colour_utc" type="color" value="#b22222"`,
 		`name="table_page_size" type="number" min="5" max="100" step="1" value="20"`,
+		`<legend>General</legend>`,
+		`name="login_timeout" type="text" inputmode="decimal" value="15"`,
+		`Login time out in minutes`,
+		`data-idle-timeout="900"`,
 		`<legend>Clocks</legend>`,
 		`<legend>Tables</legend>`,
 		`data-testid="menu-timezones"`,

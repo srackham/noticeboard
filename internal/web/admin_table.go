@@ -17,9 +17,10 @@ var errBadPage = errors.New("page must be a positive whole number")
 
 // tablePageView is the data for the full table page.
 type tablePageView struct {
-	Slug  string
-	Title string
-	Grid  tableView
+	Slug        string
+	Title       string
+	Grid        tableView
+	IdleTimeout int // seconds without user activity before the admin pages sign out
 }
 
 // tableView is the data for the grid region and its out-of-band refresh.
@@ -237,7 +238,13 @@ func (s *Server) handleTablePage(w http.ResponseWriter, r *http.Request) {
 		s.execute(w, r, "table-grid", grid, http.StatusOK)
 		return
 	}
-	s.execute(w, r, "table-page", tablePageView{Slug: t.Slug(), Title: t.Title(), Grid: grid}, http.StatusOK)
+	st, err := settings.Get(r.Context(), s.db)
+	if err != nil {
+		s.serverError(w, r, err)
+		return
+	}
+	view := tablePageView{Slug: t.Slug(), Title: t.Title(), Grid: grid, IdleTimeout: st.LoginTimeoutSeconds()}
+	s.execute(w, r, "table-page", view, http.StatusOK)
 }
 
 // handleTableNew serves the new-record form, filled with the adapter's defaults.

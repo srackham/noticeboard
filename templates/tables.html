@@ -8,8 +8,8 @@
   <script src="/static/js/htmx.min.js" defer></script>
   <script src="/static/js/app.js" defer></script>
 </head>
-{{/* Idle log-out after 15 minutes without user activity (app.js). */}}
-<body class="admin with-sidebar" data-idle-timeout="900">
+{{/* Idle log-out; the timeout is the settings form's Login timeout (app.js). */}}
+<body class="admin with-sidebar" data-idle-timeout="{{.IdleTimeout}}">
   {{template "admin-sidebar" "timezones"}}
   <main class="admin-main wide">
     <header class="admin-bar">

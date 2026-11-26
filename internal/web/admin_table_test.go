@@ -65,6 +65,7 @@ func TestTablePageShowsRawColumns(t *testing.T) {
 		"Page 1 of 1",
 		`hx-get="` + timezonesPath + `/new"`,
 		`href="/admin"`,
+		`data-idle-timeout="900"`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Errorf("table page missing %q", want)

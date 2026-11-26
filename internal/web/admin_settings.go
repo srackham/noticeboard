@@ -9,8 +9,9 @@ import (
 
 // dashboardView is the data for the dashboard: the clock list and the settings form.
 type dashboardView struct {
-	Clocks   clockListView
-	Settings settingsFormView
+	Clocks      clockListView
+	Settings    settingsFormView
+	IdleTimeout int // seconds without user activity before the admin pages sign out
 }
 
 // settingsFormView is the data for the settings form. The values are kept as
@@ -23,6 +24,7 @@ type settingsFormView struct {
 	ColourClock      string
 	ColourUTC        string
 	TablePageSize    string
+	LoginTimeout     string
 	Errors           settings.Errors // field messages, keyed by form field name
 	Notice           string          // a confirmation, such as "Saved."
 }
@@ -37,6 +39,7 @@ func newSettingsView(in settings.Input, errs settings.Errors, notice string) set
 		ColourClock:      in.ColourClock,
 		ColourUTC:        in.ColourUTC,
 		TablePageSize:    in.TablePageSize,
+		LoginTimeout:     in.LoginTimeout,
 		Errors:           errs,
 		Notice:           notice,
 	}
@@ -52,6 +55,7 @@ func inputFrom(st settings.Settings) settings.Input {
 		ColourClock:      st.ColourClock,
 		ColourUTC:        st.ColourUTC,
 		TablePageSize:    strconv.Itoa(st.TablePageSize),
+		LoginTimeout:     strconv.FormatFloat(st.LoginTimeout, 'g', -1, 64),
 	}
 }
 
@@ -67,7 +71,11 @@ func (s *Server) renderDashboard(w http.ResponseWriter, r *http.Request) {
 		s.serverError(w, r, err)
 		return
 	}
-	view := dashboardView{Clocks: clocks, Settings: newSettingsView(inputFrom(st), nil, "")}
+	view := dashboardView{
+		Clocks:      clocks,
+		Settings:    newSettingsView(inputFrom(st), nil, ""),
+		IdleTimeout: st.LoginTimeoutSeconds(),
+	}
 	s.execute(w, r, "admin-page", view, http.StatusOK)
 }
 
@@ -87,6 +95,7 @@ func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
 		ColourClock:      r.PostForm.Get("colour_clock"),
 		ColourUTC:        r.PostForm.Get("colour_utc"),
 		TablePageSize:    r.PostForm.Get("table_page_size"),
+		LoginTimeout:     r.PostForm.Get("login_timeout"),
 	}
 
 	clean, errs := settings.ParseInput(in)

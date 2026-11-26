@@ -135,8 +135,10 @@ A singleton: exactly one row, enforced by `CHECK (id = 1)` and created by the in
 | `colour_clock`      | TEXT    | `#228b22`      | `#rrggbb` (non-UTC clocks)                                 |
 | `colour_utc`        | TEXT    | `#b22222`      | `#rrggbb` (UTC clock)                                      |
 | `table_page_size`   | INTEGER | `20`           | 5–100 (`CHECK`); rows per page in the administration tables |
+| `login_timeout`     | REAL    | `15`           | 0.5–1440 (`CHECK`); minutes without user activity before the admin pages sign out |
 
-- `table_page_size` applies to every administration table page (section 5.3). It is edited on the dashboard, in the settings form's "Admin tables" fieldset.
+- `table_page_size` applies to every administration table page (section 5.3). It is edited on the dashboard, in the settings form's "Tables" fieldset.
+- `login_timeout` is the idle log-out period of the admin pages (section 4.2). It is edited on the dashboard, in the settings form's "General" fieldset, and may be fractional, such as `1.5` minutes. The pages receive it in whole seconds as `data-idle-timeout`.
 - Colours are accepted in either case and stored in lowercase.
 - Label text is fixed white. It is not a setting.
 - The colour defaults are approximations taken by eye from the mock-up and must be checked on the real display.
@@ -216,7 +218,7 @@ The mock-up is a single moment, not a specification. Zones are IANA IDs, so dayl
 3. On success the server generates 32 random bytes (`crypto/rand`) and sends them base64url-encoded in a cookie named `noticeboard_session`. It stores the hex SHA-256 of the token in `sessions`. The cookie has no `Max-Age`, so the browser drops it when its session ends; it has `HttpOnly`, `SameSite=Strict` and `Path=/admin`, and `Secure` when the request arrived over TLS (`r.TLS != nil`). The response carries `HX-Redirect: /admin`. Several sessions may be active at once.
 4. `POST /admin/logout` deletes the session row, expires the cookie (`MaxAge=-1`) and responds with `HX-Redirect: /admin/login`.
 5. Sessions have no server-side expiry. A session ends on logout (point 4), when the admin account is replaced, and when the server starts, which deletes every session row so a restart requires a fresh login.
-6. The admin pages sign out a browser after 15 minutes without user activity. The pause is the `data-idle-timeout` attribute (seconds) on their `<body>`; `app.js` then sends `POST /admin/logout` with `HX-Request` and opens `/admin/login`. The server session is ended first because `/admin/login` redirects a signed-in visitor to `/admin`, so a plain redirect would not log anyone out.
+6. The admin pages sign out a browser after a period without user activity. The period is the `login_timeout` setting in minutes (default 15, section 3.2), passed to both pages in whole seconds as the `data-idle-timeout` attribute on their `<body>`; `app.js` then sends `POST /admin/logout` with `HX-Request` and opens `/admin/login`. The server session is ended first because `/admin/login` redirects a signed-in visitor to `/admin`, so a plain redirect would not log anyone out.
 
 **Middleware** applies to all `/admin` routes except `/admin/login`. It reads the cookie, hashes the token, and accepts it only if a `sessions` row exists. Otherwise:
 
@@ -468,7 +470,7 @@ Per the project guidelines:
 | Password storage            | bcrypt, `DefaultCost` (`golang.org/x/crypto/bcrypt`); non-empty, at most 72 bytes                                                                          |
 | Admin password entry        | Interactive no-echo prompt, entered twice (`golang.org/x/term`); never a command-line argument                                                             |
 | Login failure               | Dummy-hash comparison when the username is unknown; generic 422 message                                                                                    |
-| Session                     | Random 32-byte token (base64url in cookie); hex SHA-256 stored in `sessions`; no expiry, ends on logout, admin replacement, restart, or 15 min idle; several allowed |
+| Session                     | Random 32-byte token (base64url in cookie); hex SHA-256 stored in `sessions`; no expiry, ends on logout, admin replacement, restart, or idle (the `login_timeout` setting); several allowed |
 | CSRF                        | `HX-Request` required on admin `POST`/`DELETE`; all admin forms are HTMX forms, including login and logout                                                 |
 | Lost session                | HTMX requests get `401` + `HX-Redirect`; others get `303` to login                                                                                         |
 | Deployment                  | VPN; plain HTTP; no TLS; no login throttling                                                                                                               |

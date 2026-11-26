@@ -42,8 +42,8 @@
   <script src="/static/js/htmx.min.js" defer></script>
   <script src="/static/js/app.js" defer></script>
 </head>
-{{/* Idle log-out after 15 minutes without user activity (app.js). */}}
-<body class="admin with-sidebar" data-idle-timeout="900">
+{{/* Idle log-out; the timeout is the settings form's Login timeout (app.js). */}}
+<body class="admin with-sidebar" data-idle-timeout="{{.IdleTimeout}}">
   {{template "admin-sidebar" "administration"}}
   <main class="admin-main wide">
     <header class="admin-bar">
@@ -129,6 +129,16 @@
 <form id="settings-form" class="settings-form" data-testid="settings-form"
       hx-post="/admin/settings" hx-target="this" hx-swap="outerHTML">
   {{with .Notice}}<p class="notice" role="status" data-testid="settings-saved">{{.}}</p>{{end}}
+
+  <fieldset class="settings-group">
+    <legend>General</legend>
+    <div class="field">
+      <label for="login_timeout">Login timeout</label>
+      <input id="login_timeout" name="login_timeout" type="text" inputmode="decimal" value="{{.LoginTimeout}}">
+      <p class="hint">Login time out in minutes</p>
+      {{with index .Errors "login_timeout"}}<p class="field-error" data-testid="error-login_timeout">{{.}}</p>{{end}}
+    </div>
+  </fieldset>
 
   <fieldset class="settings-group">
     <legend>Clocks</legend>

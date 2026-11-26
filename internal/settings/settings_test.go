@@ -20,6 +20,7 @@ func validSettings() Settings {
 		ColourClock:      "#228b22",
 		ColourUTC:        "#b22222",
 		TablePageSize:    20,
+		LoginTimeout:     15,
 	}
 }
 
@@ -150,9 +151,10 @@ func TestValidateReportsEachField(t *testing.T) {
 		ColourClock:      "#123",
 		ColourUTC:        "",
 		TablePageSize:    0,
+		LoginTimeout:     0,
 	}
 	_, errs := Validate(in)
-	for _, field := range []string{"title", "refresh_seconds", "colour_background", "colour_label", "colour_clock", "colour_utc", "table_page_size"} {
+	for _, field := range []string{"title", "refresh_seconds", "colour_background", "colour_label", "colour_clock", "colour_utc", "table_page_size", "login_timeout"} {
 		if _, ok := errs[field]; !ok {
 			t.Errorf("missing error for %s: %v", field, errs)
 		}
