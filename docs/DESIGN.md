@@ -321,6 +321,8 @@ The whole clock grid is one wrapper element containing the title, the grid, and 
 
 Each poll replaces the entire wrapper. A change to the title, colours or refresh interval is therefore picked up within one interval, with no page reload.
 
+**Known issue:** when a browser restores `/clocks` as its selected tab at startup, the restored document can be painted without its subresources: no stylesheet and no scripts, so the page is unstyled and the clocks do not tick. DevTools shows `document.styleSheets.length` of 0 and no failed requests, and a reload fixes it. This is browser tab-restore/freeze behaviour rather than a server fault, and it is accepted as is: no client-side workaround is attempted (the page's own scripts never ran in that state). Opening the page with `serve --launch`, or reloading it, avoids the problem.
+
 ### 6.2 Styling
 
 - Colour settings are passed to the template as CSS custom properties on the wrapper: `--colour-background`, `--colour-label`, `--colour-clock`, `--colour-utc`.
