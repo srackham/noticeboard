@@ -12,6 +12,11 @@ import (
 // maxBodyBytes is the largest request body the server reads (DESIGN.md section 2.2).
 const maxBodyBytes = 64 << 10
 
+// isAdminPath reports whether path is under /admin, the session-protected area.
+func isAdminPath(path string) bool {
+	return path == "/admin" || strings.HasPrefix(path, "/admin/")
+}
+
 // securityHeaders sets the headers that every response carries.
 func securityHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -19,6 +24,10 @@ func securityHeaders(next http.Handler) http.Handler {
 		h.Set("X-Content-Type-Options", "nosniff")
 		h.Set("X-Frame-Options", "DENY")
 		h.Set("Content-Security-Policy", "default-src 'self'; style-src 'self' 'unsafe-inline'")
+		// Admin responses hold session-dependent state, so no cache may keep a copy.
+		if isAdminPath(r.URL.Path) {
+			h.Set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+		}
 		next.ServeHTTP(w, r)
 	})
 }
@@ -84,7 +93,7 @@ func (s *Server) auditLog(next http.Handler) http.Handler {
 // isAuditable reports whether a request is a mutating request under /admin.
 func isAuditable(r *http.Request) bool {
 	mutating := r.Method == http.MethodPost || r.Method == http.MethodDelete
-	return mutating && (r.URL.Path == "/admin" || strings.HasPrefix(r.URL.Path, "/admin/"))
+	return mutating && isAdminPath(r.URL.Path)
 }
 
 // clientIP returns the host part of the remote address. Proxy headers are not trusted.
