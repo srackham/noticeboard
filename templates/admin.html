@@ -42,7 +42,8 @@
   <script src="/static/js/htmx.min.js" defer></script>
   <script src="/static/js/app.js" defer></script>
 </head>
-<body class="admin with-sidebar">
+{{/* Idle log-out after 15 minutes without user activity (app.js). */}}
+<body class="admin with-sidebar" data-idle-timeout="900">
   {{template "admin-sidebar" "administration"}}
   <main class="admin-main wide">
     <header class="admin-bar">

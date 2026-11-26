@@ -70,6 +70,45 @@
     }
   });
 
+  // The admin pages sign out after a pause in user activity, so a window left
+  // open does not stay logged in. The pause is in seconds, in the body's
+  // data-idle-timeout attribute; the login and clocks pages have no such
+  // attribute, so they never time out here.
+  var idleEvents = ["mousemove", "mousedown", "keydown", "wheel", "touchstart", "scroll"];
+
+  function startIdleLogout(seconds) {
+    var timer = null;
+
+    function signOut() {
+      // End the server session too: /admin/login sends a signed-in visitor back
+      // to /admin, so a plain redirect would not log anyone out.
+      fetch("/admin/logout", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "HX-Request": "true" }, // the server refuses admin POSTs without it
+      })
+        .catch(function () {})
+        .then(function () {
+          window.location.assign("/admin/login");
+        });
+    }
+
+    function reset() {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(signOut, seconds * 1000);
+    }
+
+    idleEvents.forEach(function (name) {
+      document.addEventListener(name, reset, { passive: true });
+    });
+    reset();
+  }
+
+  var idleSeconds = Number(document.body.getAttribute("data-idle-timeout"));
+  if (idleSeconds > 0) {
+    startIdleLogout(idleSeconds);
+  }
+
   // The Cancel button in a form empties its region. data-clear-form names the
   // region ID; without a value it means the dashboard's clock form.
   document.body.addEventListener("click", function (evt) {

@@ -215,6 +215,7 @@ The mock-up is a single moment, not a specification. Zones are IANA IDs, so dayl
 3. On success the server generates 32 random bytes (`crypto/rand`) and sends them base64url-encoded in a cookie named `noticeboard_session`. It stores the hex SHA-256 of the token in `sessions` with an expiry 12 hours ahead. The cookie has `HttpOnly`, `SameSite=Strict` and `Path=/admin`, and `Secure` when the request arrived over TLS (`r.TLS != nil`). The response carries `HX-Redirect: /admin`. Several sessions may be active at once.
 4. `POST /admin/logout` deletes the session row, expires the cookie (`MaxAge=-1`) and responds with `HX-Redirect: /admin/login`.
 5. Sessions have a fixed 12-hour lifetime with no renewal. Starting the server deletes every session row, so a restart requires a fresh login; expired rows are also deleted on each login.
+6. The admin pages sign out a browser after 15 minutes without user activity. The pause is the `data-idle-timeout` attribute (seconds) on their `<body>`; `app.js` then sends `POST /admin/logout` with `HX-Request` and opens `/admin/login`. The server session is ended first because `/admin/login` redirects a signed-in visitor to `/admin`, so a plain redirect would not log anyone out.
 
 **Middleware** applies to all `/admin` routes except `/admin/login`. It reads the cookie, hashes the token, and accepts it only if a `sessions` row exists with `expires_at` in the future. Otherwise:
 
