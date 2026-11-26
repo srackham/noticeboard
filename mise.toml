@@ -10,7 +10,7 @@ DIST_CHECKSUMS = "checksums-%s-sha256.txt"
 
 [tasks.test]
 description = "Run all tests"
-run = "go test ./..."
+run = "go vet ./... && go test ./..."
 
 [tasks.fmt]
 description = "Format Go source"

@@ -69,6 +69,9 @@ func TestSaveSettingsStoresValues(t *testing.T) {
 	}
 	if body := rec.Body.String(); !strings.Contains(body, `id="settings-form"`) {
 		t.Error("response should return the settings form")
+	} else if !strings.Contains(body, `class="hint status-ok"`) ||
+		!strings.Contains(body, `Status: <span id="status-text">Settings saved</span>`) {
+		t.Error("response should report the save in the status line")
 	}
 
 	var title, bg string
@@ -120,6 +123,10 @@ func TestSaveSettingsRejectsInvalidInput(t *testing.T) {
 			}
 			if !strings.Contains(body, `id="settings-form"`) {
 				t.Error("422 should re-render the settings form")
+			}
+			if !strings.Contains(body, `class="hint status-error"`) ||
+				!strings.Contains(body, `Status: <span id="status-text">Failed to save settings</span>`) {
+				t.Error("422 should report the failure in the status line")
 			}
 
 			var title string

@@ -191,6 +191,7 @@
   <div class="form-actions">
     <button type="submit">Save settings</button>
   </div>
+  <p id="status-line" class="hint{{with .StatusClass}} {{.}}{{end}}" role="status" data-testid="status-line">Status: <span id="status-text">{{.Status}}</span></p>
 </form>
 {{end}}
 

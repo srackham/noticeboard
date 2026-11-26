@@ -26,6 +26,8 @@ type settingsFormView struct {
 	TablePageSize    string
 	LoginTimeout     string
 	Errors           settings.Errors // field messages, keyed by form field name
+	Status           string          // the outcome of a save, shown in the status line
+	StatusClass      string          // the status line's colour class: "status-ok" or "status-error"
 }
 
 // newSettingsView builds the form data from the typed values.
@@ -98,7 +100,9 @@ func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
 
 	clean, errs := settings.ParseInput(in)
 	if len(errs) > 0 {
-		s.execute(w, r, "settings-form", newSettingsView(in, errs), http.StatusUnprocessableEntity)
+		view := newSettingsView(in, errs)
+		view.Status, view.StatusClass = "Failed to save settings", "status-error"
+		s.execute(w, r, "settings-form", view, http.StatusUnprocessableEntity)
 		return
 	}
 	stored, err := settings.Update(r.Context(), s.db, clean)
@@ -106,5 +110,7 @@ func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
 		s.serverError(w, r, err)
 		return
 	}
-	s.execute(w, r, "settings-form", newSettingsView(inputFrom(stored), nil), http.StatusOK)
+	view := newSettingsView(inputFrom(stored), nil)
+	view.Status, view.StatusClass = "Settings saved", "status-ok"
+	s.execute(w, r, "settings-form", view, http.StatusOK)
 }

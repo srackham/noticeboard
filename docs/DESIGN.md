@@ -275,7 +275,7 @@ The application runs on a VPN, so the design relies on the network for protectio
 
 **Responses**
 
-- **Success:** create, edit, toggle, move and delete return the updated clock list (`#zones`) and an empty form region, as out-of-band swaps. A settings update returns the settings form with the stored values.
+- **Success:** create, edit, toggle, move and delete return the updated clock list (`#zones`) and an empty form region, as out-of-band swaps. A settings update returns the settings form with the stored values and the outcome after the status line's "Status: " label, under the Save settings button: a green "Settings saved" after a successful save, or a red "Failed to save settings" when the form comes back with 422. The server renders both the text and the colour class, so no script is involved. The message has no timeout: it stays until the form is next replaced.
 - **Validation failure:** HTTP 422 with the form re-rendered, containing the error messages, in its own region. HTMX does not swap 4xx responses by default, so `app.js` enables the swap for 422 (section 6.5).
 - **Unknown clock `{id}`:** 404. Invalid `dir`: 400.
 - **Login and logout:** as section 4.2.

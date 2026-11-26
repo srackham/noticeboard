@@ -331,6 +331,16 @@ button:disabled {
   color: #666;
 }
 
+/* The settings form's save outcome, rendered by the server after the status
+   label. The two-class selector beats the hint colour on the same element. */
+.settings-form .hint.status-ok {
+  color: #2e7d32;
+}
+
+.settings-form .hint.status-error {
+  color: #b22222;
+}
+
 .settings-form .settings-group {
   display: grid;
   gap: 0.6rem;

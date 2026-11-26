@@ -56,20 +56,6 @@
     }
   });
 
-  // The search box is an <input type="search">, so the browser shows its own
-  // clear (x) button. When that empties the box, reload the table without the
-  // filter: submitting the HTMX search form re-renders the grid.
-  document.body.addEventListener("input", function (evt) {
-    var input = evt.target;
-    if (!input || input.id !== "table-search-input" || input.value !== "") {
-      return;
-    }
-    var form = input.closest("form");
-    if (form && form.requestSubmit) {
-      form.requestSubmit();
-    }
-  });
-
   // The admin pages sign out after a pause in user activity, so a window left
   // open does not stay logged in. The pause is in seconds, in the body's
   // data-idle-timeout attribute; the login and clocks pages have no such
