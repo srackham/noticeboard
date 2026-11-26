@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"golang.org/x/crypto/bcrypt"
 
@@ -169,12 +168,10 @@ func TestUpsertAdminReplacesAccount(t *testing.T) {
 func TestUpsertAdminEndsExistingSessions(t *testing.T) {
 	ctx := context.Background()
 	database := openTestDB(t)
-	now := time.Date(2024, time.June, 1, 12, 0, 0, 0, time.UTC)
-
 	if err := UpsertAdmin(ctx, database, "admin@example.com", "pw"); err != nil {
 		t.Fatalf("UpsertAdmin: %v", err)
 	}
-	token, err := CreateSession(ctx, database, now)
+	token, err := CreateSession(ctx, database)
 	if err != nil {
 		t.Fatalf("CreateSession: %v", err)
 	}
@@ -182,7 +179,7 @@ func TestUpsertAdminEndsExistingSessions(t *testing.T) {
 	if err := UpsertAdmin(ctx, database, "admin@example.com", "new pw"); err != nil {
 		t.Fatalf("second UpsertAdmin: %v", err)
 	}
-	if ok, _ := ValidSession(ctx, database, token, now); ok {
+	if ok, _ := ValidSession(ctx, database, token); ok {
 		t.Error("session survived replacing the admin account")
 	}
 }

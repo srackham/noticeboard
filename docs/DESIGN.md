@@ -75,7 +75,7 @@ noticeboard/
 │       ├── admin_table.go  # generic table pages: /admin/tables/{table}
 │       ├── admin_settings.go
 │       └── middleware.go   # security headers, body size limit, audit logging
-├── migrations/             # 0001_init.sql (schema and seed); migrations.go embeds them
+├── migrations/             # numbered schema migrations; migrations.go embeds them
 ├── templates/              # html/template files (embedded), including tables.html
 ├── static/
 │   ├── fonts/              # DSEG7Classic-Bold.woff2, DSEG-LICENSE.txt
@@ -156,10 +156,11 @@ The single administrator account (section 4.1). `CHECK (id = 1)` limits the tabl
 
 Server-side login sessions (section 4.2).
 
-| Field        | Type    | Constraints                                                                                   |
-| ------------ | ------- | --------------------------------------------------------------------------------------------- |
-| `token_hash` | TEXT    | primary key; hex-encoded SHA-256 of the session token, so the database holds no usable tokens |
-| `expires_at` | INTEGER | Unix time; expired rows are ignored and deleted                                               |
+| Field        | Type | Constraints                                                                                   |
+| ------------ | ---- | --------------------------------------------------------------------------------------------- |
+| `token_hash` | TEXT | primary key; hex-encoded SHA-256 of the session token, so the database holds no usable tokens |
+
+Sessions have no expiry column: a row exists only while the session is live (section 4.2).
 
 ### 3.5 Seed data
 
@@ -212,14 +213,14 @@ The mock-up is a single moment, not a specification. Zones are IANA IDs, so dayl
 
 1. `GET /admin/login` renders the form (username and password) with a Cancel link beneath Log in that opens the clocks page `/clocks`. Like all admin forms, it is an HTMX form (see CSRF below).
 2. `POST /admin/login` normalises the username (section 4.1), looks up the admin and checks the password with `bcrypt.CompareHashAndPassword`. If the username does not match, the server still runs the comparison against a dummy bcrypt hash, so the response time does not reveal which usernames exist. A failure returns HTTP 422 with the message "Username or password is incorrect.", for both a wrong username and a wrong password. A username that contains white space cannot match, so it gets the same message.
-3. On success the server generates 32 random bytes (`crypto/rand`) and sends them base64url-encoded in a cookie named `noticeboard_session`. It stores the hex SHA-256 of the token in `sessions` with an expiry 12 hours ahead. The cookie has `HttpOnly`, `SameSite=Strict` and `Path=/admin`, and `Secure` when the request arrived over TLS (`r.TLS != nil`). The response carries `HX-Redirect: /admin`. Several sessions may be active at once.
+3. On success the server generates 32 random bytes (`crypto/rand`) and sends them base64url-encoded in a cookie named `noticeboard_session`. It stores the hex SHA-256 of the token in `sessions`. The cookie has no `Max-Age`, so the browser drops it when its session ends; it has `HttpOnly`, `SameSite=Strict` and `Path=/admin`, and `Secure` when the request arrived over TLS (`r.TLS != nil`). The response carries `HX-Redirect: /admin`. Several sessions may be active at once.
 4. `POST /admin/logout` deletes the session row, expires the cookie (`MaxAge=-1`) and responds with `HX-Redirect: /admin/login`.
-5. Sessions have a fixed 12-hour lifetime with no renewal. Starting the server deletes every session row, so a restart requires a fresh login; expired rows are also deleted on each login.
+5. Sessions have no server-side expiry. A session ends on logout (point 4), when the admin account is replaced, and when the server starts, which deletes every session row so a restart requires a fresh login.
 6. The admin pages sign out a browser after 15 minutes without user activity. The pause is the `data-idle-timeout` attribute (seconds) on their `<body>`; `app.js` then sends `POST /admin/logout` with `HX-Request` and opens `/admin/login`. The server session is ended first because `/admin/login` redirects a signed-in visitor to `/admin`, so a plain redirect would not log anyone out.
 
-**Middleware** applies to all `/admin` routes except `/admin/login`. It reads the cookie, hashes the token, and accepts it only if a `sessions` row exists with `expires_at` in the future. Otherwise:
+**Middleware** applies to all `/admin` routes except `/admin/login`. It reads the cookie, hashes the token, and accepts it only if a `sessions` row exists. Otherwise:
 
-- an HTMX request receives `401` with `HX-Redirect: /admin/login`, so an expired session during use sends the browser to the login page;
+- an HTMX request receives `401` with `HX-Redirect: /admin/login`, so a session lost during use sends the browser to the login page;
 - any other request receives `303` to `/admin/login`.
 
 A request to `/admin/login` with a valid session is redirected to `/admin`.
@@ -428,7 +429,7 @@ Per the project guidelines:
   - `internal/paging`: `Clamp` at the ends, beyond the last page, the `LastPage` sentinel and an empty table.
   - `internal/admintable`: region grouping, and the timezones adapter's columns, defaults, raw cells, `Load`, create/update values and error mapping.
   - `internal/db`: migrations apply in order, once, and are idempotent; a newer `user_version` is refused.
-  - `internal/auth`: password hashing, username validation and normalisation, and session expiry.
+  - `internal/auth`: password hashing, username validation and normalisation, and session storage.
   - `internal/auditlog`: the 1000-line cap removes the oldest lines.
 - **Integration tests** use `httptest` against the routes, with a temporary SQLite file (`t.TempDir()`) and the real migrations applied.
   - Login (including the generic 422), logout, the session middleware, and the HTMX `401` + `HX-Redirect` path.
@@ -464,9 +465,9 @@ Per the project guidelines:
 | Password storage            | bcrypt, `DefaultCost` (`golang.org/x/crypto/bcrypt`); non-empty, at most 72 bytes                                                                          |
 | Admin password entry        | Interactive no-echo prompt, entered twice (`golang.org/x/term`); never a command-line argument                                                             |
 | Login failure               | Dummy-hash comparison when the username is unknown; generic 422 message                                                                                    |
-| Session                     | Random 32-byte token (base64url in cookie); hex SHA-256 stored in `sessions`; fixed 12-hour lifetime; several sessions allowed                             |
+| Session                     | Random 32-byte token (base64url in cookie); hex SHA-256 stored in `sessions`; no expiry, ends on logout, admin replacement, restart, or 15 min idle; several allowed |
 | CSRF                        | `HX-Request` required on admin `POST`/`DELETE`; all admin forms are HTMX forms, including login and logout                                                 |
-| Expired session             | HTMX requests get `401` + `HX-Redirect`; others get `303` to login                                                                                         |
+| Lost session                | HTMX requests get `401` + `HX-Redirect`; others get `303` to login                                                                                         |
 | Deployment                  | VPN; plain HTTP; no TLS; no login throttling                                                                                                               |
 | Security headers            | `nosniff`, `X-Frame-Options: DENY`, CSP `default-src 'self'`; 64 KiB body limit; 10 s header timeout; graceful shutdown                                    |
 | Audit log                   | `noticeboard.log` (`serve --log`); logins and mutating admin requests; capped at 1000 lines                                                                |

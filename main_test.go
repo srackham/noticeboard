@@ -6,7 +6,6 @@ import (
 	"errors"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"noticeboard/internal/auth"
 	"noticeboard/internal/db"
@@ -90,8 +89,7 @@ func TestAdminInitReplacesAccountAndEndsSessions(t *testing.T) {
 	}
 
 	sqlDB := openDB(t, path)
-	now := time.Now()
-	token, err := auth.CreateSession(ctx, sqlDB, now)
+	token, err := auth.CreateSession(ctx, sqlDB)
 	if err != nil {
 		t.Fatalf("CreateSession: %v", err)
 	}
@@ -99,7 +97,7 @@ func TestAdminInitReplacesAccountAndEndsSessions(t *testing.T) {
 	if err := adminInit(path, "admin@example.com", fakePrompt("new pw", "new pw")); err != nil {
 		t.Fatalf("second adminInit: %v", err)
 	}
-	if ok, _ := auth.ValidSession(ctx, sqlDB, token, now); ok {
+	if ok, _ := auth.ValidSession(ctx, sqlDB, token); ok {
 		t.Error("session survived admin init")
 	}
 	if ok, _ := auth.Authenticate(ctx, sqlDB, "admin@example.com", "old pw"); ok {

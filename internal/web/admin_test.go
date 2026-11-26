@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"noticeboard/internal/auditlog"
 	"noticeboard/internal/auth"
@@ -137,8 +136,8 @@ func TestLoginSucceeds(t *testing.T) {
 	if c.Secure {
 		t.Error("cookie is Secure over plain HTTP")
 	}
-	if c.MaxAge != int(auth.SessionLifetime.Seconds()) {
-		t.Errorf("MaxAge = %d, want %d", c.MaxAge, int(auth.SessionLifetime.Seconds()))
+	if c.MaxAge != 0 {
+		t.Errorf("MaxAge = %d, want 0 (browser-session cookie)", c.MaxAge)
 	}
 	if countRows(t, sqlDB, "sessions") != 1 {
 		t.Errorf("sessions rows = %d, want 1", countRows(t, sqlDB, "sessions"))
@@ -245,27 +244,6 @@ func TestAdminPageNeedsSession(t *testing.T) {
 	if rec.Code != http.StatusUnauthorized || rec.Header().Get("HX-Redirect") != "/admin/login" {
 		t.Errorf("HTMX without session: status %d, HX-Redirect %q; want 401 and /admin/login",
 			rec.Code, rec.Header().Get("HX-Redirect"))
-	}
-}
-
-func TestExpiredSessionIsRejected(t *testing.T) {
-	h, sqlDB := newTestServer(t)
-	seedAdmin(t, sqlDB)
-
-	past := fixedNow.Add(-auth.SessionLifetime - time.Hour)
-	token, err := auth.CreateSession(context.Background(), sqlDB, past)
-	if err != nil {
-		t.Fatalf("CreateSession: %v", err)
-	}
-	c := &http.Cookie{Name: sessionCookieName, Value: token}
-
-	if rec := serve(h, withCookie(httptest.NewRequest(http.MethodGet, "/admin", nil), c)); rec.Code != http.StatusSeeOther {
-		t.Errorf("expired session: status %d, want 303", rec.Code)
-	}
-	req := withCookie(httptest.NewRequest(http.MethodGet, "/admin", nil), c)
-	req.Header.Set("HX-Request", "true")
-	if rec := serve(h, req); rec.Code != http.StatusUnauthorized || rec.Header().Get("HX-Redirect") != "/admin/login" {
-		t.Errorf("expired session via HTMX: status %d, HX-Redirect %q", rec.Code, rec.Header().Get("HX-Redirect"))
 	}
 }
 

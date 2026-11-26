@@ -8,11 +8,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	"time"
 )
-
-// SessionLifetime is how long a login lasts. Sessions do not renew.
-const SessionLifetime = 12 * time.Hour
 
 // newSessionToken returns 32 random bytes encoded as base64url. Only the hash of this token is stored.
 func newSessionToken() (string, error) {
@@ -29,31 +25,32 @@ func TokenHash(token string) string {
 	return hex.EncodeToString(sum[:])
 }
 
-// CreateSession starts a session at now and returns its token. The token is
-// the caller's to keep (in the cookie). The database keeps only its hash.
-func CreateSession(ctx context.Context, db *sql.DB, now time.Time) (string, error) {
+// CreateSession starts a session and returns its token. The token is the
+// caller's to keep (in the cookie). The database keeps only its hash.
+//
+// A session has no server-side expiry. It ends on logout, when the admin
+// account is replaced, and when the server starts; the browser also signs out
+// after a period without user activity (see static/js/app.js).
+func CreateSession(ctx context.Context, db *sql.DB) (string, error) {
 	token, err := newSessionToken()
 	if err != nil {
 		return "", err
 	}
 	if _, err := db.ExecContext(ctx,
-		`INSERT INTO sessions (token_hash, expires_at) VALUES (?, ?)`,
-		TokenHash(token), now.Add(SessionLifetime).Unix()); err != nil {
+		`INSERT INTO sessions (token_hash) VALUES (?)`, TokenHash(token)); err != nil {
 		return "", fmt.Errorf("create session: %w", err)
 	}
 	return token, nil
 }
 
-// ValidSession reports whether token names a session that has not expired at now.
-// An empty token is never valid.
-func ValidSession(ctx context.Context, db *sql.DB, token string, now time.Time) (bool, error) {
+// ValidSession reports whether token names a session. An empty token is never valid.
+func ValidSession(ctx context.Context, db *sql.DB, token string) (bool, error) {
 	if token == "" {
 		return false, nil
 	}
 	var n int
 	if err := db.QueryRowContext(ctx,
-		`SELECT COUNT(*) FROM sessions WHERE token_hash = ? AND expires_at > ?`,
-		TokenHash(token), now.Unix()).Scan(&n); err != nil {
+		`SELECT COUNT(*) FROM sessions WHERE token_hash = ?`, TokenHash(token)).Scan(&n); err != nil {
 		return false, fmt.Errorf("check session: %w", err)
 	}
 	return n > 0, nil
@@ -75,14 +72,6 @@ func DeleteSession(ctx context.Context, db *sql.DB, token string) error {
 func DeleteAllSessions(ctx context.Context, db *sql.DB) error {
 	if _, err := db.ExecContext(ctx, `DELETE FROM sessions`); err != nil {
 		return fmt.Errorf("delete sessions: %w", err)
-	}
-	return nil
-}
-
-// DeleteExpiredSessions removes sessions that have expired at now.
-func DeleteExpiredSessions(ctx context.Context, db *sql.DB, now time.Time) error {
-	if _, err := db.ExecContext(ctx, `DELETE FROM sessions WHERE expires_at <= ?`, now.Unix()); err != nil {
-		return fmt.Errorf("delete expired sessions: %w", err)
 	}
 	return nil
 }

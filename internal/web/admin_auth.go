@@ -3,7 +3,6 @@ package web
 import (
 	"errors"
 	"net/http"
-	"time"
 
 	"noticeboard/internal/auth"
 )
@@ -67,17 +66,14 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	setAuditDetail(r, "login ok "+username)
-	now := s.now()
-	if err := auth.DeleteExpiredSessions(ctx, s.db, now); err != nil {
-		s.serverError(w, r, err)
-		return
-	}
-	token, err := auth.CreateSession(ctx, s.db, now)
+	token, err := auth.CreateSession(ctx, s.db)
 	if err != nil {
 		s.serverError(w, r, err)
 		return
 	}
-	http.SetCookie(w, newSessionCookie(r, token, int(auth.SessionLifetime/time.Second)))
+	// MaxAge 0 makes it a browser-session cookie: the browser drops it when its
+	// session ends. The session itself ends on logout or when the server starts.
+	http.SetCookie(w, newSessionCookie(r, token, 0))
 	w.Header().Set("HX-Redirect", "/admin")
 	w.WriteHeader(http.StatusNoContent)
 }
@@ -99,7 +95,7 @@ func (s *Server) handleAdmin(w http.ResponseWriter, r *http.Request) {
 	s.renderDashboard(w, r)
 }
 
-// requireSession lets the request through only with a valid, unexpired session.
+// requireSession lets the request through only with a valid session.
 // Otherwise it redirects to the login page. An HTMX request gets 401 with
 // HX-Redirect, so the browser navigates to the login page instead of swapping it into the page.
 func (s *Server) requireSession(next http.Handler) http.Handler {
@@ -119,7 +115,7 @@ func (s *Server) requireSession(next http.Handler) http.Handler {
 
 // hasSession reports whether the request carries a valid session cookie.
 func (s *Server) hasSession(r *http.Request) (bool, error) {
-	return auth.ValidSession(r.Context(), s.db, sessionToken(r), s.now())
+	return auth.ValidSession(r.Context(), s.db, sessionToken(r))
 }
 
 // newLoginView builds the login view. It reports whether an administrator account exists.
