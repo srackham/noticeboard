@@ -441,8 +441,8 @@ Per the project guidelines:
   - Zone CRUD, toggle, move, the 404 and 400 cases, and 422 validation responses.
   - Table pages: page parsing, the page size setting, the full page and fragment (`Vary: HX-Request`), the raw columns and Edit/Delete buttons, the prefilled new-record form, create, update, delete, validation and refusal, search (filtering, totals, literal wildcards, filter kept in pager and record URLs, no-match message), stale-record 404s, unknown slug, middleware, auditing, and a test-only second adapter proving the layer is generic.
   - Clocks page rendering with the current settings, including the empty message.
+- **Browser tests** use `github.com/chromedp/chromedp` to drive headless Chrome against an `httptest` server. They cover `/clocks` only, skip when Chrome or Chromium is not installed (or with `-short`), and check the rendered document title, the nine tiles, the clock colours that come from the stylesheet, and that the HTMX poll picks up a settings change without a reload. The markup in section 6.4 supports adding more later.
 - **testify** is a test-only dependency, used only where it clearly simplifies an assertion.
-- **Functional tests** are not written in this phase. The markup in section 6.4 is designed so they can be added later with Playwright.
 
 ## 12. Implementation plan
 

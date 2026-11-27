@@ -110,6 +110,7 @@ See [_Routes_ in the design specification](./docs/DESIGN.md#5-routes).
 
 - [mise](https://mise.jdx.dev/), which installs the Go version pinned in `mise.toml`. Alternatively, install Go 1.26.6 yourself.
 - A host clock kept accurate, for example with NTP. The clocks page shows the host's time.
+- Optional: Chrome or Chromium, for the browser tests. Without it those tests skip; `go test -short ./...` skips them too.
 
 ### Build
 
