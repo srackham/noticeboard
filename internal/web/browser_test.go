@@ -2,6 +2,7 @@ package web
 
 import (
 	"context"
+	"errors"
 	"net/http/httptest"
 	osexec "os/exec"
 	"testing"
@@ -142,5 +143,101 @@ func TestClocksPagePollsInBrowser(t *testing.T) {
 	}
 	if title != "Harbour" {
 		t.Errorf("title = %q, want %q", title, "Harbour")
+	}
+}
+
+// waitFor polls the JavaScript expression in the page until it is true. Errors
+// are ignored and retried, because a navigation in flight destroys the
+// JavaScript execution context that the next evaluation needs.
+func waitFor(context context.Context, expression string) error {
+	deadline := time.Now().Add(10 * time.Second)
+	var lastErr error
+	for time.Now().Before(deadline) {
+		ok, err := chromedp.Run(context, chromedp.Evaluate[bool](expression))
+		if err == nil && ok {
+			return nil
+		}
+		lastErr = err
+		time.Sleep(100 * time.Millisecond)
+	}
+	if lastErr != nil {
+		return lastErr
+	}
+	return errors.New("timed out waiting for " + expression)
+}
+
+// loginInBrowser opens the login page, fills in the form and presses the Log in
+// button, then waits for the dashboard. It leaves the browser logged in.
+func loginInBrowser(t *testing.T, ctx context.Context, baseURL string) {
+	t.Helper()
+	if _, err := chromedp.Run(ctx, chromedp.Navigate(baseURL+"/admin/login")); err != nil {
+		t.Fatalf("navigate to the login page: %v", err)
+	}
+	if err := chromedp.Do(ctx,
+		chromedp.WaitVisible(`#login-form`),
+		chromedp.SendKeys(`#username`, adminUsername),
+		chromedp.SendKeys(`#password`, adminPassword),
+		chromedp.Click(`#login-form button[type="submit"]`),
+	); err != nil {
+		t.Fatalf("log in: %v", err)
+	}
+	// The login response carries HX-Redirect: /admin, so HTMX navigates there.
+	if err := waitFor(ctx, `location.pathname === "/admin" &&
+		document.querySelector('[data-testid="logout"]') !== null`); err != nil {
+		t.Fatalf("dashboard did not load after logging in: %v", err)
+	}
+}
+
+// TestAdminLoginInBrowser logs in through the login page's Log in button.
+func TestAdminLoginInBrowser(t *testing.T) {
+	h, sqlDB := newTestServer(t)
+	seedAdmin(t, sqlDB)
+	ts := httptest.NewServer(h)
+	defer ts.Close()
+	ctx := browserContext(t)
+
+	loginInBrowser(t, ctx, ts.URL)
+
+	menu, err := chromedp.Run(ctx, chromedp.Text(`[data-testid="menu-administration"]`))
+	if err != nil {
+		t.Fatalf("read the admin menu: %v", err)
+	}
+	if menu != "Administration" {
+		t.Errorf("menu item = %q, want %q", menu, "Administration")
+	}
+	if n := countRows(t, sqlDB, "sessions"); n != 1 {
+		t.Errorf("sessions rows = %d, want 1", n)
+	}
+}
+
+// TestAdminLogoutInBrowser logs in, then logs out through the admin menu's
+// Log out button, and checks that the session is gone.
+func TestAdminLogoutInBrowser(t *testing.T) {
+	h, sqlDB := newTestServer(t)
+	seedAdmin(t, sqlDB)
+	ts := httptest.NewServer(h)
+	defer ts.Close()
+	ctx := browserContext(t)
+
+	loginInBrowser(t, ctx, ts.URL)
+
+	if err := chromedp.Do(ctx, chromedp.Click(`[data-testid="logout"]`)); err != nil {
+		t.Fatalf("click Log out: %v", err)
+	}
+	// The logout response carries HX-Redirect: /admin/login.
+	if err := waitFor(ctx, `location.pathname === "/admin/login" &&
+		document.querySelector('#login-form') !== null`); err != nil {
+		t.Fatalf("login page did not load after logging out: %v", err)
+	}
+
+	// The session is gone: a fresh request for the dashboard goes to the login page.
+	if _, err := chromedp.Run(ctx, chromedp.Navigate(ts.URL+"/admin")); err != nil {
+		t.Fatalf("navigate to the dashboard: %v", err)
+	}
+	if err := waitFor(ctx, `location.pathname === "/admin/login"`); err != nil {
+		t.Fatalf("dashboard was reachable after logging out: %v", err)
+	}
+	if n := countRows(t, sqlDB, "sessions"); n != 0 {
+		t.Errorf("sessions rows = %d, want 0", n)
 	}
 }
