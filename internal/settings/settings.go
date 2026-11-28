@@ -21,7 +21,7 @@ const (
 	MaxRefresh       = 60
 	MinTablePageSize = 5
 	MaxTablePageSize = 100
-	MinLoginTimeout  = 0.5  // minutes
+	MinLoginTimeout  = 0.1  // minutes
 	MaxLoginTimeout  = 1440 // minutes, one day
 )
 

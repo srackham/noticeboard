@@ -58,7 +58,7 @@ func TestParseInputReportsField(t *testing.T) {
 		{name: "page size too large", mutate: func(in *Input) { in.TablePageSize = strconv.Itoa(MaxTablePageSize + 1) }, wantField: FieldTablePageSize},
 		{name: "login timeout empty", mutate: func(in *Input) { in.LoginTimeout = "" }, wantField: FieldLoginTimeout},
 		{name: "login timeout not a number", mutate: func(in *Input) { in.LoginTimeout = "soon" }, wantField: FieldLoginTimeout},
-		{name: "login timeout too small", mutate: func(in *Input) { in.LoginTimeout = "0.1" }, wantField: FieldLoginTimeout},
+		{name: "login timeout too small", mutate: func(in *Input) { in.LoginTimeout = "0.05" }, wantField: FieldLoginTimeout},
 		{name: "login timeout too large", mutate: func(in *Input) { in.LoginTimeout = "1441" }, wantField: FieldLoginTimeout},
 	}
 	for _, tt := range tests {

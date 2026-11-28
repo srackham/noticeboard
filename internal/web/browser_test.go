@@ -648,25 +648,25 @@ func TestAdminSettingsReachClocksInBrowser(t *testing.T) {
 	}
 }
 
-// TestAdminIdleLogoutInBrowser waits for the shortest supported login timeout,
-// 0.5 minutes, twice over, so it takes a little over a minute.
+// TestAdminIdleLogoutInBrowser uses the shortest supported login timeout, 0.1
+// minutes (6 seconds), so it takes about ten seconds.
 func TestAdminIdleLogoutInBrowser(t *testing.T) {
 	h, sqlDB := newTestServer(t)
 	seedAdmin(t, sqlDB)
-	exec(t, sqlDB, `UPDATE settings SET login_timeout = 0.5`)
+	exec(t, sqlDB, `UPDATE settings SET login_timeout = 0.1`)
 	ts := httptest.NewServer(h)
 	defer ts.Close()
-	ctx := browserContextTimeout(t, 150*time.Second)
+	ctx := browserContext(t)
 
 	loginInBrowser(t, ctx, ts.URL)
 
 	// Activity before the timeout is due must keep the session alive.
-	time.Sleep(20 * time.Second)
+	time.Sleep(2 * time.Second)
 	if _, err := chromedp.Run(ctx, chromedp.Evaluate[bool](
 		`document.dispatchEvent(new MouseEvent("mousemove")), true`)); err != nil {
 		t.Fatalf("dispatch activity: %v", err)
 	}
-	time.Sleep(13 * time.Second) // 33 s after loading, past the original 30 s deadline
+	time.Sleep(4 * time.Second) // 6 s after loading, the original deadline
 	ok, err := chromedp.Run(ctx, chromedp.Evaluate[bool](`location.pathname === "/admin"`))
 	if err != nil {
 		t.Fatalf("read the location: %v", err)
@@ -675,10 +675,10 @@ func TestAdminIdleLogoutInBrowser(t *testing.T) {
 		t.Fatal("the session ended even though there was activity")
 	}
 
-	// With no further activity the idle log-out fires about 30 s later.
+	// With no further activity the idle log-out fires about 6 s later.
 	if err := waitForTimeout(ctx,
 		`location.pathname === "/admin/login" && document.querySelector("#login-form") !== null`,
-		45*time.Second); err != nil {
+		20*time.Second); err != nil {
 		t.Fatalf("the idle log-out did not happen: %v", err)
 	}
 	if n := countRows(t, sqlDB, "sessions"); n != 0 {
