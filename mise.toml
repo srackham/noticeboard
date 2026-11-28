@@ -12,8 +12,12 @@ DIST_CHECKSUMS = "checksums-%s-sha256.txt"
 description = "Run all tests"
 run = "go vet ./... && go test ./..."
 
-[tasks.test-in-browser]
-description = "Run all in-browser tests)"
+[tasks.test-short]
+description = "Run non-browser tests"
+run = "go vet ./... && go test -short ./..."
+
+[tasks.test-browser]
+description = "Run all in-browser tests"
 run = "go test ./internal/web -run InBrowser -count=1 -v"
 
 [tasks.fmt]
