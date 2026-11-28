@@ -6,7 +6,8 @@ A Web application written in Go + HTMX + SQLite to mimic the functionality of th
 
 - A public clocks page showing up to nine world clocks in a 3×3 grid, in 24-hour `HH:MM` time. The UTC clock is red and the other clocks are green. The colours can be changed.
 - Live updates: the clocks page refreshes itself at a configurable interval, and shows a STALE indicator if an update fails.
-- An administration dashboard, protected by login, for managing the clocks (add, edit, enable or disable, reorder, delete) and the clock display settings (title, colours, refresh interval).
+- An administration dashboard, protected by login, for managing the clocks (add, edit, enable or disable, reorder, delete) and the settings (title, colours, refresh interval, table page size, login timeout).
+- A paginated, searchable administration table for the `timezones` records behind the clocks, with Edit and Delete per row.
 - Each clock's time zone is chosen from a list of IANA zones, so daylight saving is applied automatically.
 - Desktop mode: `serve --launch` opens the clocks page in a browser app-mode window, and `open <address>` opens a clocks page that is already running.
 - A single self-contained binary. Data is kept in one SQLite file, and building needs no C compiler.
@@ -18,11 +19,11 @@ A Web application written in Go + HTMX + SQLite to mimic the functionality of th
 
 #### Admin dashboard
 
-![World Clocks](docs/admin-dashboard.png)
+![Admin dashboard](docs/admin-dashboard.png)
 
 ## Installation
 
-The application is a single executable binary file (less than 15MB) containing the application, application resources, a web server and the SQLite database engine. The only other file is the database file which is created when the application is first executed. There are no other dependencies.
+The application is a single executable binary file (about 14MB) containing the application, application resources, a web server and the SQLite database engine. There are no other dependencies. On first run `serve` creates the SQLite database (`./noticeboard.db`) and the audit log (`./noticeboard.log`); both paths can be changed with `serve` options.
 
 See [Development](#development) if you prefer building from source instead of using prebuilt binaries.
 
@@ -42,7 +43,7 @@ Download `noticeboard-<release_tag>-windows-amd64.exe` executable from the [Gith
 ./noticeboard admin init <username>
 ```
 
-The username must be one or more printable characters with no spaces. The password is requested twice. It is not echoed, and it is never taken from the command line. Running `admin init` replaces the exiting account and ends all existing logins.
+The username must be one or more printable characters with no spaces. The password is requested twice. It is not echoed, and it is never taken from the command line. Running `admin init` replaces the existing account and ends all existing logins.
 
 ### Start the server
 
@@ -72,7 +73,7 @@ To open a clocks page that is already running, for example on another host machi
 ```
 
 > [!NOTE]
-> Specify the `0.0.0.0` "any" address to allow other machines on the network to access the server.
+> Use the `0.0.0.0` "any" address to allow other machines on the network to access the server, for example `./noticeboard serve --addr 0.0.0.0:8080`.
 
 ## CLI
 
@@ -110,7 +111,8 @@ See [_Routes_ in the design specification](./docs/DESIGN.md#5-routes).
 
 - [mise](https://mise.jdx.dev/), which installs the Go version pinned in `mise.toml`. Alternatively, install Go 1.26.6 yourself.
 - A host clock kept accurate, for example with NTP. The clocks page shows the host's time.
-- Optional: Chrome or Chromium, for the browser tests. Without it those tests skip; `go test -short ./...` skips them too.
+- Optional: Chrome or Chromium, for the browser tests. Without it those tests skip, as they do with `go test -short ./...`.
+- Optional: the [GitHub CLI](https://cli.github.com/) (`gh`), for `mise run release`.
 
 ### Build
 
@@ -119,7 +121,7 @@ mise install
 mise run build
 ```
 
-This produces the `noticeboard` executable. Without mise, run:
+This produces the `noticeboard` executable. The templates, static files and database migrations are embedded in it, so rebuild after changing them. Without mise, run:
 
 ```sh
 CGO_ENABLED=0 go build -o noticeboard .
@@ -129,11 +131,16 @@ For another platform, set `GOOS` and `GOARCH`, for example `GOOS=windows GOARCH=
 
 ### mise development tasks
 
-- `mise run test` runs the tests.
+Run `mise tasks` to list them.
+
+- `mise run build` builds the `./noticeboard` development binary without CGO. It first runs `tidy` and `test`.
+- `mise run test` runs `go vet ./...` and then `go test ./...`, which includes the browser tests. They skip when Chrome or Chromium is not installed.
+- `mise run test-short` runs `go vet ./...` and then `go test -short ./...`, which skips the browser tests and takes a few seconds.
+- `mise run test-browser` runs only the browser tests (`go test ./internal/web -run InBrowser -count=1 -v`), which drive headless Chrome with `chromedp`.
 - `mise run fmt` formats the Go source.
 - `mise run tidy` verifies and tidies the Go modules.
-- `mise run clean` tidies the modules and removes the built executable.
-- `mise run release -- <version>` builds the Linux and Windows binaries and publishes a GitHub release for the existing local tag `<version>` (requires the `gh` CLI).
+- `mise run dist <version>` builds the Linux and Windows (amd64) binaries and their checksum file into `dist/`. The working directory must be clean and the local tag `<version>` must point at `HEAD`; an existing build of the same version is not overwritten.
+- `mise run release <version>` publishes the artifacts already built by `dist` for the local tag `<version>` as a draft GitHub release, after verifying their checksums. It pushes the tag and requires the `gh` CLI.
 
 ## Security
 
