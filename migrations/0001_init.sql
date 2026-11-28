@@ -28,7 +28,9 @@ CREATE TABLE settings (
     colour_utc        TEXT    NOT NULL DEFAULT '#b22222'
                               CHECK (colour_utc GLOB '#[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]'),
     table_page_size   INTEGER NOT NULL DEFAULT 20
-                              CHECK (table_page_size BETWEEN 5 AND 100)
+                              CHECK (table_page_size BETWEEN 5 AND 100),
+    login_timeout     REAL    NOT NULL DEFAULT 15
+                              CHECK (login_timeout BETWEEN 0.1 AND 1440)
 );
 
 -- The administrator account. The username rule (printable, no white space) is
@@ -39,9 +41,11 @@ CREATE TABLE admins (
     password_hash TEXT    NOT NULL CHECK (password_hash <> '')
 );
 
+-- Sessions have no server-side expiry. A row exists only while the session is
+-- live: it ends on logout, when the admin account is replaced, and when the
+-- server starts (section 4.2).
 CREATE TABLE sessions (
-    token_hash TEXT    PRIMARY KEY,
-    expires_at INTEGER NOT NULL
+    token_hash TEXT PRIMARY KEY
 );
 
 -- Seed: the settings singleton with its defaults.
