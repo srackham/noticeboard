@@ -79,6 +79,7 @@ func countRows(t *testing.T, sqlDB *sql.DB, table string) int {
 }
 
 func TestLoginPageShowsForm(t *testing.T) {
+	t.Parallel()
 	h, _ := newTestServer(t)
 	rec := serve(h, httptest.NewRequest(http.MethodGet, "/admin/login", nil))
 	if rec.Code != http.StatusOK {
@@ -100,6 +101,7 @@ func TestLoginPageShowsForm(t *testing.T) {
 }
 
 func TestLoginPageHintOnlyWithoutAdmin(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 
 	body := serve(h, httptest.NewRequest(http.MethodGet, "/admin/login", nil)).Body.String()
@@ -115,6 +117,7 @@ func TestLoginPageHintOnlyWithoutAdmin(t *testing.T) {
 }
 
 func TestLoginSucceeds(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	seedAdmin(t, sqlDB)
 
@@ -150,6 +153,7 @@ func TestLoginSucceeds(t *testing.T) {
 }
 
 func TestLoginCookieIsSecureOverTLS(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	seedAdmin(t, sqlDB)
 
@@ -162,6 +166,7 @@ func TestLoginCookieIsSecureOverTLS(t *testing.T) {
 }
 
 func TestLoginFailureIsGeneric(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	seedAdmin(t, sqlDB)
 
@@ -195,6 +200,7 @@ func TestLoginFailureIsGeneric(t *testing.T) {
 }
 
 func TestLoginFailureEchoesUsernameNotPassword(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	seedAdmin(t, sqlDB)
 
@@ -208,6 +214,7 @@ func TestLoginFailureEchoesUsernameNotPassword(t *testing.T) {
 }
 
 func TestLoginRequiresHTMXHeader(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	seedAdmin(t, sqlDB)
 
@@ -222,6 +229,7 @@ func TestLoginRequiresHTMXHeader(t *testing.T) {
 }
 
 func TestLoginRejectsOversizedBody(t *testing.T) {
+	t.Parallel()
 	h, _ := newTestServer(t)
 	big := url.Values{"username": {strings.Repeat("a", 70<<10)}}
 	rec := serve(h, formRequest("/admin/login", big, true))
@@ -231,6 +239,7 @@ func TestLoginRejectsOversizedBody(t *testing.T) {
 }
 
 func TestAdminPageNeedsSession(t *testing.T) {
+	t.Parallel()
 	h, _ := newTestServer(t)
 
 	rec := serve(h, httptest.NewRequest(http.MethodGet, "/admin", nil))
@@ -248,6 +257,7 @@ func TestAdminPageNeedsSession(t *testing.T) {
 }
 
 func TestLoginPageRedirectsWhenLoggedIn(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	seedAdmin(t, sqlDB)
 	c := sessionCookie(login(h, adminUsername, adminPassword))
@@ -259,6 +269,7 @@ func TestLoginPageRedirectsWhenLoggedIn(t *testing.T) {
 }
 
 func TestLogoutEndsSession(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	seedAdmin(t, sqlDB)
 	c := sessionCookie(login(h, adminUsername, adminPassword))
@@ -285,6 +296,7 @@ func TestLogoutEndsSession(t *testing.T) {
 }
 
 func TestLogoutRequiresSessionAndHTMX(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	seedAdmin(t, sqlDB)
 	c := sessionCookie(login(h, adminUsername, adminPassword))
@@ -306,6 +318,7 @@ func TestLogoutRequiresSessionAndHTMX(t *testing.T) {
 }
 
 func TestUnknownAdminPathNeedsSession(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	seedAdmin(t, sqlDB)
 
@@ -319,6 +332,7 @@ func TestUnknownAdminPathNeedsSession(t *testing.T) {
 }
 
 func TestSecurityHeaders(t *testing.T) {
+	t.Parallel()
 	h, _ := newTestServer(t)
 	for _, path := range []string{"/", "/clocks", "/admin/login"} {
 		rec := serve(h, httptest.NewRequest(http.MethodGet, path, nil))
@@ -348,6 +362,7 @@ func auditLines(t *testing.T, path string) []string {
 }
 
 func TestAuditLogRecordsLoginsAndAdminChanges(t *testing.T) {
+	t.Parallel()
 	logPath := filepath.Join(t.TempDir(), "audit.log")
 	audit, err := auditlog.Open(logPath)
 	if err != nil {
@@ -383,6 +398,7 @@ func TestAuditLogRecordsLoginsAndAdminChanges(t *testing.T) {
 }
 
 func TestAuditLogRecordsRefusedMutation(t *testing.T) {
+	t.Parallel()
 	logPath := filepath.Join(t.TempDir(), "audit.log")
 	audit, err := auditlog.Open(logPath)
 	if err != nil {

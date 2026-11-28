@@ -425,7 +425,7 @@ The Go version is pinned in the `[tools]` section of `mise.toml`.
 
 ## 11. Testing
 
-Per the project guidelines:
+Per the project guidelines. Every test builds its own database and server, so the non-browser tests call `t.Parallel()` and run concurrently; the browser tests run one at a time, because each launches its own Chrome.
 
 - **Unit tests** use Go's built-in `testing` package with table-driven tests.
   - `internal/clock`: time formatting, and colour-class selection (exact zone `UTC` only), using an injected `now`.

@@ -50,6 +50,7 @@ func setPageSize(t *testing.T, h http.Handler, c *http.Cookie, size string) {
 }
 
 func TestTablePageShowsRawColumns(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	c := adminSession(t, h, sqlDB)
 
@@ -89,6 +90,7 @@ func TestTablePageShowsRawColumns(t *testing.T) {
 }
 
 func TestTablePageFragmentAndVary(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	c := adminSession(t, h, sqlDB)
 
@@ -111,6 +113,7 @@ func TestTablePageFragmentAndVary(t *testing.T) {
 }
 
 func TestTablePageSizeComesFromSettings(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	c := adminSession(t, h, sqlDB)
 
@@ -139,6 +142,7 @@ func TestTablePageSizeComesFromSettings(t *testing.T) {
 }
 
 func TestTablePageParsing(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	c := adminSession(t, h, sqlDB)
 	setPageSize(t, h, c, "5")
@@ -161,6 +165,7 @@ func TestTablePageParsing(t *testing.T) {
 }
 
 func TestTablePageEmpty(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	c := adminSession(t, h, sqlDB)
 	exec(t, sqlDB, `DELETE FROM timezones`)
@@ -178,6 +183,7 @@ func TestTablePageEmpty(t *testing.T) {
 }
 
 func TestTableNewFormDefaults(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	c := adminSession(t, h, sqlDB)
 
@@ -196,6 +202,7 @@ func TestTableNewFormDefaults(t *testing.T) {
 }
 
 func TestTableCreate(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	c := adminSession(t, h, sqlDB)
 
@@ -227,6 +234,7 @@ func TestTableCreate(t *testing.T) {
 }
 
 func TestTableCreateShowsLastPage(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	c := adminSession(t, h, sqlDB)
 	setPageSize(t, h, c, "5")
@@ -239,6 +247,7 @@ func TestTableCreateShowsLastPage(t *testing.T) {
 }
 
 func TestTableCreateValidation(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		form     url.Values
@@ -292,6 +301,7 @@ func TestTableCreateValidation(t *testing.T) {
 }
 
 func TestTableCreateRefusedWhenNineEnabled(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	c := adminSession(t, h, sqlDB)
 
@@ -310,6 +320,7 @@ func TestTableCreateRefusedWhenNineEnabled(t *testing.T) {
 }
 
 func TestTableEditFormShowsAllEditableFields(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	c := adminSession(t, h, sqlDB)
 	id := clockID(t, sqlDB, "Australia/Sydney")
@@ -329,6 +340,7 @@ func TestTableEditFormShowsAllEditableFields(t *testing.T) {
 }
 
 func TestTableUpdate(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	c := adminSession(t, h, sqlDB)
 	id := clockID(t, sqlDB, "Asia/Kolkata")
@@ -355,6 +367,7 @@ func TestTableUpdate(t *testing.T) {
 }
 
 func TestTableUpdateCanDisableARecord(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	c := adminSession(t, h, sqlDB)
 	id := clockID(t, sqlDB, "Europe/Moscow")
@@ -371,6 +384,7 @@ func TestTableUpdateCanDisableARecord(t *testing.T) {
 }
 
 func TestTableUpdateValidation(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	c := adminSession(t, h, sqlDB)
 	id := clockID(t, sqlDB, "Asia/Kolkata")
@@ -390,6 +404,7 @@ func TestTableUpdateValidation(t *testing.T) {
 }
 
 func TestTableUpdateRefusedWhenNineEnabled(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	c := adminSession(t, h, sqlDB)
 	// Disable one clock, then add an enabled one: nine are enabled and the
@@ -415,6 +430,7 @@ func TestTableUpdateRefusedWhenNineEnabled(t *testing.T) {
 }
 
 func TestTableDelete(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	c := adminSession(t, h, sqlDB)
 	id := clockID(t, sqlDB, "Europe/Moscow")
@@ -431,6 +447,7 @@ func TestTableDelete(t *testing.T) {
 }
 
 func TestTableDeleteClampsThePage(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	c := adminSession(t, h, sqlDB)
 	setPageSize(t, h, c, "5")
@@ -448,6 +465,7 @@ func TestTableDeleteClampsThePage(t *testing.T) {
 }
 
 func TestTableUnknownRecord(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	c := adminSession(t, h, sqlDB)
 	missing := timezonesPath + "/999999"
@@ -481,6 +499,7 @@ func TestTableUnknownRecord(t *testing.T) {
 }
 
 func TestTableUnknownSlug(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	c := adminSession(t, h, sqlDB)
 
@@ -493,6 +512,7 @@ func TestTableUnknownSlug(t *testing.T) {
 }
 
 func TestTableNeedsSessionAndHTMX(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	seedAdmin(t, sqlDB)
 
@@ -523,6 +543,7 @@ func TestTableNeedsSessionAndHTMX(t *testing.T) {
 }
 
 func TestTableChangesAreAudited(t *testing.T) {
+	t.Parallel()
 	logPath := filepath.Join(t.TempDir(), "audit.log")
 	audit, err := auditlog.Open(logPath)
 	if err != nil {
@@ -604,6 +625,7 @@ func (n *notebookTable) Update(ctx context.Context, id int64, v admintable.Value
 func (n *notebookTable) Delete(ctx context.Context, id int64) error { return nil }
 
 func TestTableLayerIsGeneric(t *testing.T) {
+	t.Parallel()
 	srv, sqlDB := newServer(t, nil)
 	notebook := &notebookTable{entries: []string{"first"}}
 	srv.tables = append(srv.tables, notebook)
@@ -644,6 +666,7 @@ func TestTableLayerIsGeneric(t *testing.T) {
 }
 
 func TestTablePagerURLs(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	c := adminSession(t, h, sqlDB)
 	setPageSize(t, h, c, "5")
@@ -659,6 +682,7 @@ func TestTablePagerURLs(t *testing.T) {
 }
 
 func TestTableSearchFormIsLeftOfAddRecord(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	c := adminSession(t, h, sqlDB)
 
@@ -682,6 +706,7 @@ func TestTableSearchFormIsLeftOfAddRecord(t *testing.T) {
 }
 
 func TestTableSearchFiltersRows(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	c := adminSession(t, h, sqlDB)
 
@@ -715,6 +740,7 @@ func TestTableSearchFiltersRows(t *testing.T) {
 }
 
 func TestTableSearchPreservedInLinks(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	c := adminSession(t, h, sqlDB)
 	setPageSize(t, h, c, "5")
@@ -737,6 +763,7 @@ func TestTableSearchPreservedInLinks(t *testing.T) {
 }
 
 func TestTableSearchNoMatches(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	c := adminSession(t, h, sqlDB)
 

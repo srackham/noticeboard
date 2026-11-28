@@ -82,6 +82,7 @@ func tiles(body string) []tile {
 }
 
 func TestClocksShowsSeedClocksInOrder(t *testing.T) {
+	t.Parallel()
 	h, _ := newTestServer(t)
 	rec := getClocksFragment(t, h)
 	if rec.Code != http.StatusOK {
@@ -111,6 +112,7 @@ func TestClocksShowsSeedClocksInOrder(t *testing.T) {
 }
 
 func TestClocksPageWrapperAttributes(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	exec(t, sqlDB, `UPDATE settings SET refresh_seconds = 12`)
 	body := getClocksFragment(t, h).Body.String()
@@ -136,6 +138,7 @@ func TestClocksPageWrapperAttributes(t *testing.T) {
 }
 
 func TestClocksPageTilesMarkup(t *testing.T) {
+	t.Parallel()
 	h, _ := newTestServer(t)
 	body := getClocksFragment(t, h).Body.String()
 
@@ -154,6 +157,7 @@ func TestClocksPageTilesMarkup(t *testing.T) {
 }
 
 func TestClocksPageHidesDisabledClocks(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	exec(t, sqlDB, `UPDATE timezones SET enabled = 0 WHERE zone = 'Asia/Kolkata'`)
 
@@ -167,6 +171,7 @@ func TestClocksPageHidesDisabledClocks(t *testing.T) {
 }
 
 func TestClocksPageEmptyMessage(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	exec(t, sqlDB, `UPDATE timezones SET enabled = 0`)
 
@@ -180,6 +185,7 @@ func TestClocksPageEmptyMessage(t *testing.T) {
 }
 
 func TestClocksPageTitle(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 
 	body := getClocksFragment(t, h).Body.String()
@@ -195,6 +201,7 @@ func TestClocksPageTitle(t *testing.T) {
 }
 
 func TestClocksPageEscapesLabelsAndZones(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	exec(t, sqlDB, `UPDATE timezones SET label = '<script>x</script>' WHERE zone = 'UTC'`)
 
@@ -208,6 +215,7 @@ func TestClocksPageEscapesLabelsAndZones(t *testing.T) {
 }
 
 func TestClocksPageInvalidZoneShowsPlaceholder(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	exec(t, sqlDB, `UPDATE timezones SET zone = 'Not/AZone' WHERE zone = 'Europe/Kyiv'`)
 
@@ -218,6 +226,7 @@ func TestClocksPageInvalidZoneShowsPlaceholder(t *testing.T) {
 }
 
 func TestClocksPageDatabaseErrorReturns500(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	sqlDB.Close()
 
@@ -227,6 +236,7 @@ func TestClocksPageDatabaseErrorReturns500(t *testing.T) {
 }
 
 func TestIndexIsFullPage(t *testing.T) {
+	t.Parallel()
 	h, _ := newTestServer(t)
 	rec := get(t, h, "/clocks")
 	if rec.Code != http.StatusOK {
@@ -256,6 +266,7 @@ func TestIndexIsFullPage(t *testing.T) {
 }
 
 func TestIndexTitleUsesSettingsTitle(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	exec(t, sqlDB, `UPDATE settings SET title = 'Harbour'`)
 	body := get(t, h, "/clocks").Body.String()
@@ -265,6 +276,7 @@ func TestIndexTitleUsesSettingsTitle(t *testing.T) {
 }
 
 func TestStaticFiles(t *testing.T) {
+	t.Parallel()
 	h, _ := newTestServer(t)
 	for _, path := range []string{
 		"/static/css/app.css",
@@ -279,6 +291,7 @@ func TestStaticFiles(t *testing.T) {
 }
 
 func TestUnknownPathIsNotFound(t *testing.T) {
+	t.Parallel()
 	h, _ := newTestServer(t)
 	if rec := get(t, h, "/nope"); rec.Code != http.StatusNotFound {
 		t.Errorf("status = %d, want 404", rec.Code)

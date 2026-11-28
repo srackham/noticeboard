@@ -9,6 +9,7 @@ import (
 )
 
 func TestNewClockFormOffersZoneDropDown(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	c := adminSession(t, h, sqlDB)
 
@@ -34,6 +35,7 @@ func TestNewClockFormOffersZoneDropDown(t *testing.T) {
 }
 
 func TestEditClockFormSelectsCurrentZone(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	c := adminSession(t, h, sqlDB)
 	id := clockID(t, sqlDB, "Australia/Sydney")
@@ -51,6 +53,7 @@ func TestEditClockFormSelectsCurrentZone(t *testing.T) {
 }
 
 func TestEditClockFormKeepsZoneMissingFromList(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	c := adminSession(t, h, sqlDB)
 	// A zone the list does not offer, as if the database were older than the list.
@@ -64,6 +67,7 @@ func TestEditClockFormKeepsZoneMissingFromList(t *testing.T) {
 }
 
 func TestInvalidZoneSubmissionKeepsSelection(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	c := adminSession(t, h, sqlDB)
 
@@ -82,6 +86,7 @@ func TestInvalidZoneSubmissionKeepsSelection(t *testing.T) {
 }
 
 func TestZoneGroupsSplitByRegionAndKeepCurrent(t *testing.T) {
+	t.Parallel()
 	groups := zoneGroups([]string{"Asia/Tokyo", "Europe/Kyiv", "UTC"}, "Asia/Tokyo")
 	names := make([]string, len(groups))
 	for i, g := range groups {

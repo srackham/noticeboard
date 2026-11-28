@@ -9,6 +9,7 @@ import (
 )
 
 func TestLoginFormAsksForUsername(t *testing.T) {
+	t.Parallel()
 	h, _ := newTestServer(t)
 	body := serve(h, httptest.NewRequest(http.MethodGet, "/admin/login", nil)).Body.String()
 
@@ -27,6 +28,7 @@ func TestLoginFormAsksForUsername(t *testing.T) {
 }
 
 func TestHintShowsUsernameCommand(t *testing.T) {
+	t.Parallel()
 	h, _ := newTestServer(t)
 	body := serve(h, httptest.NewRequest(http.MethodGet, "/admin/login", nil)).Body.String()
 	if !strings.Contains(body, "noticeboard admin init &lt;username&gt;") {
@@ -35,6 +37,7 @@ func TestHintShowsUsernameCommand(t *testing.T) {
 }
 
 func TestLoginWithUsernameContainingSpaceFails(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	seedAdmin(t, sqlDB)
 
@@ -51,6 +54,7 @@ func TestLoginWithUsernameContainingSpaceFails(t *testing.T) {
 }
 
 func TestLoginWithEmailStyleUsernameStillWorks(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	seedAdmin(t, sqlDB)
 

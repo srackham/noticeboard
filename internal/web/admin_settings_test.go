@@ -24,6 +24,7 @@ func validSettingsForm() url.Values {
 }
 
 func TestDashboardShowsSettingsForm(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	c := adminSession(t, h, sqlDB)
 
@@ -60,6 +61,7 @@ func TestDashboardShowsSettingsForm(t *testing.T) {
 }
 
 func TestSaveSettingsStoresValues(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	c := adminSession(t, h, sqlDB)
 
@@ -91,6 +93,7 @@ func TestSaveSettingsStoresValues(t *testing.T) {
 }
 
 func TestSaveSettingsRejectsInvalidInput(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name      string
 		field     string
@@ -139,6 +142,7 @@ func TestSaveSettingsRejectsInvalidInput(t *testing.T) {
 }
 
 func TestRejectedSettingsKeepTypedValues(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	c := adminSession(t, h, sqlDB)
 	form := validSettingsForm()
@@ -152,6 +156,7 @@ func TestRejectedSettingsKeepTypedValues(t *testing.T) {
 }
 
 func TestBlankTitleHidesClockTitle(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	c := adminSession(t, h, sqlDB)
 	form := validSettingsForm()
@@ -166,6 +171,7 @@ func TestBlankTitleHidesClockTitle(t *testing.T) {
 }
 
 func TestSettingsNeedSessionAndHTMX(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	seedAdmin(t, sqlDB)
 
@@ -207,6 +213,7 @@ func menuLinks(t *testing.T, body string) []string {
 }
 
 func TestAdminMenuOrder(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	c := adminSession(t, h, sqlDB)
 

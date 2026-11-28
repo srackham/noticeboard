@@ -75,6 +75,7 @@ func zoneOrder(t *testing.T, sqlDB *sql.DB) []string {
 }
 
 func TestDashboardListsClocks(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	c := adminSession(t, h, sqlDB)
 
@@ -99,6 +100,7 @@ func TestDashboardListsClocks(t *testing.T) {
 }
 
 func TestNewClockForm(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	c := adminSession(t, h, sqlDB)
 
@@ -113,6 +115,7 @@ func TestNewClockForm(t *testing.T) {
 }
 
 func TestCreateClock(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	c := adminSession(t, h, sqlDB)
 	// Free a clock slot first.
@@ -139,6 +142,7 @@ func TestCreateClock(t *testing.T) {
 }
 
 func TestCreateClockValidation(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	c := adminSession(t, h, sqlDB)
 
@@ -164,6 +168,7 @@ func TestCreateClockValidation(t *testing.T) {
 }
 
 func TestCreateClockRefusedWhenNineEnabled(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	c := adminSession(t, h, sqlDB)
 
@@ -178,6 +183,7 @@ func TestCreateClockRefusedWhenNineEnabled(t *testing.T) {
 }
 
 func TestEditClockForm(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	c := adminSession(t, h, sqlDB)
 	id := clockID(t, sqlDB, "UTC")
@@ -199,6 +205,7 @@ func TestEditClockForm(t *testing.T) {
 }
 
 func TestUnknownClockIsNotFound(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	c := adminSession(t, h, sqlDB)
 
@@ -218,6 +225,7 @@ func TestUnknownClockIsNotFound(t *testing.T) {
 }
 
 func TestUpdateClock(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	c := adminSession(t, h, sqlDB)
 	id := clockID(t, sqlDB, "UTC")
@@ -236,6 +244,7 @@ func TestUpdateClock(t *testing.T) {
 }
 
 func TestUpdateClockDuplicateIsValidationError(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	c := adminSession(t, h, sqlDB)
 
@@ -250,6 +259,7 @@ func TestUpdateClockDuplicateIsValidationError(t *testing.T) {
 }
 
 func TestToggleClock(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	c := adminSession(t, h, sqlDB)
 	id := clockID(t, sqlDB, "Europe/Kyiv")
@@ -267,6 +277,7 @@ func TestToggleClock(t *testing.T) {
 }
 
 func TestToggleEnableRefusedWhenNineEnabled(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	c := adminSession(t, h, sqlDB)
 	kyiv := clockID(t, sqlDB, "Europe/Kyiv")
@@ -289,6 +300,7 @@ func TestToggleEnableRefusedWhenNineEnabled(t *testing.T) {
 }
 
 func TestMoveClock(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	c := adminSession(t, h, sqlDB)
 	india := clockID(t, sqlDB, "Asia/Kolkata")
@@ -310,6 +322,7 @@ func TestMoveClock(t *testing.T) {
 }
 
 func TestDeleteClock(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	c := adminSession(t, h, sqlDB)
 	india := clockID(t, sqlDB, "Asia/Kolkata")
@@ -327,6 +340,7 @@ func TestDeleteClock(t *testing.T) {
 }
 
 func TestDeleteRequiresHTMX(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	c := adminSession(t, h, sqlDB)
 	req := withCookie(httptest.NewRequest(http.MethodDelete, "/admin/zones/"+clockID(t, sqlDB, "Asia/Kolkata"), nil), c)
@@ -336,6 +350,7 @@ func TestDeleteRequiresHTMX(t *testing.T) {
 }
 
 func TestClockActionsNeedSession(t *testing.T) {
+	t.Parallel()
 	h, sqlDB := newTestServer(t)
 	seedAdmin(t, sqlDB)
 	id := clockID(t, sqlDB, "UTC")
@@ -348,6 +363,7 @@ func TestClockActionsNeedSession(t *testing.T) {
 }
 
 func TestClockChangesAreAudited(t *testing.T) {
+	t.Parallel()
 	logPath := filepath.Join(t.TempDir(), "audit.log")
 	audit, err := auditlog.Open(logPath)
 	if err != nil {
